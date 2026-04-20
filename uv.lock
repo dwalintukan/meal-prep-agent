@@ -240,7 +240,7 @@ wheels = [
 [[package]]
 name = "meal-prep-agent"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "aiosqlite" },
     { name = "anthropic" },
