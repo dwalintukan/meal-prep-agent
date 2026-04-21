@@ -13,7 +13,10 @@ async def post_shutdown(application: Application) -> None:
 
 
 def run() -> None:
+    print("Loading env...")
     load_dotenv()
+
+    print("Connecting Telegram bot...")
     app = (
         Application.builder()
         .token(os.getenv("TELEGRAM_BOT_TOKEN", ""))
