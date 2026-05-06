@@ -39,7 +39,7 @@ Intent Classifier (claude-haiku-4-5, forced tool schema)
 
 ## Environment
 
-Copy `.env.example` to `.env` and fill in:
+Create an `.env` file at root and fill in:
 - `ANTHROPIC_API_KEY`
 - `TELEGRAM_BOT_TOKEN`
 - `DATABASE_PATH` (default: `data/meal_prep.db`)
