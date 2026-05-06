@@ -14,3 +14,7 @@ Selection rules:
 
 Call `create_meal_plan` now.
 """
+
+CHAT_PROMPT = """
+You are a friendly Meal Prep Assistant. Format for Telegram (`*bold*`, bullet points, ≤4096 chars).
+"""
