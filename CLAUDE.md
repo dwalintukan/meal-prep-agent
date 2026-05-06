@@ -49,7 +49,7 @@ Intent Classifier (claude-haiku-4-5, forced tool schema)
 - `agent/workflows.py` — `MealPlanWorkflow`, `AddRecipeWorkflow`, `ChatWorkflow`
 - `agent/router.py` — Dispatches to workflow based on intent
 - `bot/handlers.py` — Telegram command and message handlers
-- `bot/main.py` — Bot startup; stores shared state in `bot.bot_data`
+- `bot/main.py` — Bot startup; stores global shared state in separate modules
 
 ## Storage
 
