@@ -2,6 +2,8 @@ from enum import Enum
 
 from pydantic import BaseModel
 
+from anthropic import AsyncAnthropic
+
 
 class Intent(str, Enum):
     PLAN = "plan"
