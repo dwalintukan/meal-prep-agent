@@ -1,19 +1,41 @@
 from datetime import date
+from anthropic import AsyncAnthropic
 
+from agent.prompts import MEAL_PLAN_PROMPT
+from agent.tools import CREATE_MEAL_PLAN_TOOL
 from storage.recipe_store import RecipeStore
 from storage.weekly_plan_store import WeeklyPlanStore
 
 
-def meal_plan_workflow() -> str:
+async def meal_plan_workflow(client: AsyncAnthropic) -> str:
     # Fetch all recipes
-    recipes = RecipeStore()
-    recipes.get_all()
+    recipe_store = RecipeStore()
+    recipes = {r.id: {"name": r.name, "tags": r.tags} for r in recipe_store.get_all()}
 
     # Fetch previous weekly_plan
-    weekly_plans = WeeklyPlanStore()
-    weekly_plans.get_nearest_by_date(date.today())
+    weekly_plan_store = WeeklyPlanStore()
+    prev_weekly_plan = weekly_plan_store.get_nearest_by_date(date.today())
 
     # Call LLM to get new plan with minimal overlap
+    llm_resp = await client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=512,
+        system=[
+            {
+                "type": "text",
+                "text": MEAL_PLAN_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
+        tools=[CREATE_MEAL_PLAN_TOOL],
+        tool_choice={"type": "tool", "name": "create_meal_plan"},
+        messages=[
+            {
+                "role": "user",
+                "content": "",
+            }
+        ],
+    )
 
     # Validate recipe_ids
 

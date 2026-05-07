@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Protocol
 
 from models.domain import WeeklyPlan
@@ -36,11 +36,15 @@ class WeeklyPlanStore:
             return None
         return self._row_to_plan(row)
 
-    async def get_nearest_by_date(self, timestamp: date) -> WeeklyPlan | None:
+    async def get_last_weekly_plan(self) -> WeeklyPlan | None:
+        today = date.today()
+        this_monday = today - timedelta(days=today.weekday())
+        last_monday = this_monday - timedelta(weeks=1)
+
         db = get_db()
         async with db.execute(
-            "SELECT * FROM weekly_plans WHERE timestamp < ? ORDER BY timestamp DESC LIMIT 1",
-            (timestamp,),
+            "SELECT * FROM weekly_plans WHERE timestamp = ? LIMIT 1",
+            (last_monday.isoformat(),),
         ) as cur:
             row = await cur.fetchone()
         if row is None:
