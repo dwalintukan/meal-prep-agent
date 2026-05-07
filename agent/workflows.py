@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 from anthropic import AsyncAnthropic
 
@@ -47,6 +48,12 @@ async def meal_plan_workflow(client: AsyncAnthropic) -> str:
     # Validate recipe_ids
     recipe_ids = resp.content[0].input["recipe_ids"]
     notes = resp.content[0].input["notes"]
+
+    # Raise exception if picked a non-existent recipe_id
+    if not all(True for recipe_id in recipe_ids if recipe_id in recipes):
+        raise Exception(f"Could not find recipe_id {recipe_id}")
+
+    # Create weekly_plan
     weekly_plan = WeeklyPlan(
         timestamp=utils.date.this_monday(),
         recipe_ids=recipe_ids,
@@ -54,7 +61,10 @@ async def meal_plan_workflow(client: AsyncAnthropic) -> str:
     )
 
     # Aggregate ingredients
+    agg_ingredients = defaultdict(float)
+    for recipe_id in recipe_ids:
+        recipe = recipes[recipe_id]
+        for ingredient in recipe.ingredients:
+            agg_ingredients[ingredient] += ingredient.amount
 
     # Create shopping_items
-
-    # Create weekly_plan
