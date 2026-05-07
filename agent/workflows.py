@@ -25,9 +25,11 @@ class MealPlanWorkflow:
         self.weekly_plan_store = weekly_plan_store
         self.shopping_item_store = shopping_item_store
 
-        self.recipe_bank: dict[str, Recipe] = None
-        self.prev_recipe_ids: list[int] = None
-        self.new_recipe_ids: list[int] = None
+        self.recipe_bank: dict[str, Recipe] | None = None
+        self.prev_recipe_ids: list[int] | None = None
+        self.new_recipe_ids: list[int] | None = None
+        self.new_weekly_plan: WeeklyPlan | None = None
+        self.new_shopping_items: list[ShoppingItem] | None = None
 
     async def _fetch_recipe_bank(self) -> None:
         recipe_bank_list = await self.recipe_store.get_all()
@@ -84,13 +86,13 @@ class MealPlanWorkflow:
     async def _persist_weekly_plan(self) -> None:
         async with transaction():
             # Create weekly_plan
-            weekly_plan = WeeklyPlan(
+            self.new_weekly_plan = WeeklyPlan(
                 timestamp=utils.date.this_monday(),
                 recipe_ids=self.new_recipe_ids,
                 created_at=utils.date.today(),
             )
             weekly_plan_id = await self.weekly_plan_store.create(
-                weekly_plan, commit=False
+                self.new_weekly_plan, commit=False
             )
 
             # Aggregate ingredients
@@ -115,9 +117,23 @@ class MealPlanWorkflow:
                 shopping_items.append(shopping_item)
                 await shopping_item_store.create(shopping_item, commit=False)
 
+    def _format_message(self) -> str:
+        recipe_strs = []
+        for idx, recipe_id in enumerate(self.new_recipe_ids):
+            recipe = self.recipe_bank[recipe_id]
+            recipe_strs.append(f"{idx}. {recipe.name} – {recipe.tags}")
+        meal_lines = "\n".join(recipe_strs)
+
+        shopping_strs = []
+        for si in self.new_shopping_items:
+            shopping_strs.append(f"- {si.name} {si.unit} {si.amount}")
+        shopping_lines = "\n".join(shopping_strs)
+
+        return f"**Week of {self.new_weekly_plan.timestamp.isoformat()}**\n{meal_lines}\n\n**Shopping List**\n{shopping_lines}"
+
     async def run(self) -> str:
         self._fetch_recipe_bank()
         self._fetch_prev_recipe_ids()
         self._get_recommended_recipes()
         self._persist_weekly_plan()
-        # TODO: Return weekly plan + ingredients + notes
+        return self._format_message()
