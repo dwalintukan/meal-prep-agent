@@ -35,6 +35,17 @@ class WeeklyPlanStore:
             return None
         return self._row_to_plan(row)
 
+    async def get_nearest_by_date(self, timestamp: date) -> WeeklyPlan | None:
+        db = get_db()
+        async with db.execute(
+            "SELECT * FROM weekly_plans WHERE timestamp < ? ORDER BY timestamp DESC LIMIT 1",
+            (timestamp,),
+        ) as cur:
+            row = await cur.fetchone()
+        if row is None:
+            return None
+        return await self._load_recipe(dict(row))
+
     async def get_all(self) -> list[WeeklyPlan]:
         db = get_db()
         async with db.execute("SELECT * FROM weekly_plans") as cur:
