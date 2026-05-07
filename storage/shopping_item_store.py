@@ -14,11 +14,11 @@ class IShoppingItemStore(Protocol):
 
 
 class ShoppingItemStore:
-    async def create(self, item: ShoppingItem, commit: bool = True) -> None:
+    async def create(self, item: ShoppingItem, commit: bool = True) -> int:
         db = get_db()
-        await db.execute(
-            "INSERT INTO shopping_items (id, weekly_plan_id, ingredient_name, unit, amount) "
-            "VALUES (?, ?, ?, ?, ?)",
+        cur = await db.execute(
+            "INSERT INTO shopping_items (weekly_plan_id, ingredient_name, unit, amount) "
+            "VALUES (?, ?, ?, ?)",
             (
                 item.id,
                 item.weekly_plan_id,
@@ -29,6 +29,7 @@ class ShoppingItemStore:
         )
         if commit:
             await db.commit()
+        return cur.lastrowid
 
     async def get(self, id: int) -> ShoppingItem | None:
         db = get_db()
