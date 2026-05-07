@@ -1,4 +1,4 @@
-from datetime import date
+import json
 from anthropic import AsyncAnthropic
 
 from agent.prompts import MEAL_PLAN_PROMPT
@@ -15,11 +15,13 @@ async def meal_plan_workflow(client: AsyncAnthropic) -> str:
     # Fetch previous weekly_plan
     weekly_plan_store = WeeklyPlanStore()
     prev_weekly_plan = weekly_plan_store.get_last_weekly_plan_recipe_ids()
-    prev_recipe_ids = (
-        prev_weekly_plan.recipe_ids if prev_weekly_plan is not None else []
-    )
+    prev_recipe_ids = prev_weekly_plan.recipe_ids if prev_weekly_plan else []
 
     # Call LLM to get new plan with minimal overlap
+    message = (
+        f"Recipe bank:\n{json.dumps(recipes)}\n\n"
+        f"Previous recipe_ids: {json.dumps(prev_recipe_ids)}"
+    )
     llm_resp = await client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=512,
@@ -35,7 +37,7 @@ async def meal_plan_workflow(client: AsyncAnthropic) -> str:
         messages=[
             {
                 "role": "user",
-                "content": "",
+                "content": message,
             }
         ],
     )
