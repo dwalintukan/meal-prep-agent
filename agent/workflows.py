@@ -77,7 +77,7 @@ class MealPlanWorkflow:
         # Raise exception if picked a non-existent recipe_id
         missing_recipe_ids = [rid for rid in recipe_ids if rid not in self.recipe_bank]
         if missing_recipe_ids:
-            raise AttributeError(f"Could not find recipe_ids: {missing_recipe_ids}")
+            raise ValueError(f"Could not find recipe_ids: {missing_recipe_ids}")
 
         self.new_recipe_ids = recipe_ids
 
@@ -98,12 +98,12 @@ class MealPlanWorkflow:
             for recipe_id in self.new_recipe_ids:
                 recipe = self.recipe_bank[recipe_id]
                 for ing in recipe.ingredients:
-                    key = f"{ing.name}-{ing.unit}"
+                    key = (ing.name, ing.unit)
                     agg_ingredients[key] += ing.amount
 
             # Create shopping_items
             for key, amount in agg_ingredients.items():
-                name, unit = key.split("-")
+                name, unit = key
                 shopping_item = ShoppingItem(
                     weekly_plan_id=weekly_plan_id,
                     ingredient_name=name,
@@ -117,7 +117,7 @@ class MealPlanWorkflow:
         recipe_strs = []
         for idx, recipe_id in enumerate(self.new_recipe_ids):
             recipe = self.recipe_bank[recipe_id]
-            recipe_strs.append(f"{idx}. {recipe.name} – {recipe.tags}")
+            recipe_strs.append(f"{idx}. {recipe.name} ({', '.join(recipe.tags)})")
         meal_lines = "\n".join(recipe_strs)
 
         shopping_strs = []
