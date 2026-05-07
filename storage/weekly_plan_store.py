@@ -16,12 +16,11 @@ class IWeeklyPlanStore(Protocol):
 
 
 class WeeklyPlanStore:
-    async def create(self, plan: WeeklyPlan, commit: bool = True) -> None:
+    async def create(self, plan: WeeklyPlan, commit: bool = True) -> int:
         db = get_db()
-        await db.execute(
-            "INSERT INTO weekly_plans (id, timestamp, recipe_ids, created_at) VALUES (?, ?, ?, ?)",
+        cur = await db.execute(
+            "INSERT INTO weekly_plans (timestamp, recipe_ids, created_at) VALUES (?, ?, ?)",
             (
-                plan.id,
                 plan.timestamp.isoformat(),
                 json.dumps(plan.recipe_ids),
                 plan.created_at.isoformat(),
@@ -29,6 +28,7 @@ class WeeklyPlanStore:
         )
         if commit:
             await db.commit()
+        return cur.lastrowid
 
     async def get(self, id: int) -> WeeklyPlan | None:
         db = get_db()
