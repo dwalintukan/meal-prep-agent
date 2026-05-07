@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from storage import init_db, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 from models.domain import Ingredient, Recipe, WeeklyPlan, ShoppingItem
-from agent.workflows import MealPlanWorkflow
+from agent.workflows.meal_plan import MealPlanWorkflow
 import utils.date
 
 
