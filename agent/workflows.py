@@ -4,7 +4,7 @@ from anthropic import AsyncAnthropic
 
 from agent.prompts import MEAL_PLAN_PROMPT
 from agent.tools import CREATE_MEAL_PLAN_TOOL
-from models.domain import ShoppingItem, WeeklyPlan
+from models.domain import Recipe, ShoppingItem, WeeklyPlan
 from storage.db import transaction
 from storage.recipe_store import RecipeStore
 from storage.weekly_plan_store import WeeklyPlanStore
@@ -12,77 +12,112 @@ from storage.shopping_item_store import ShoppingItemStore
 import utils.date
 
 
-async def meal_plan_workflow(client: AsyncAnthropic) -> str:
-    # Fetch all recipes
-    recipe_store = RecipeStore()
-    recipes = {r.id: {"name": r.name, "tags": r.tags} for r in recipe_store.get_all()}
+class MealPlanWorkflow:
+    def __init__(
+        self,
+        client: AsyncAnthropic,
+        recipe_store: RecipeStore,
+        weekly_plan_store: WeeklyPlanStore,
+        shopping_item_store: ShoppingItemStore,
+    ):
+        self.client = client
+        self.recipe_store = recipe_store
+        self.weekly_plan_store = weekly_plan_store
+        self.shopping_item_store = shopping_item_store
 
-    # Fetch previous weekly_plan
-    weekly_plan_store = WeeklyPlanStore()
-    prev_weekly_plan = weekly_plan_store.get_last_weekly_plan_recipe_ids()
-    prev_recipe_ids = prev_weekly_plan.recipe_ids if prev_weekly_plan else []
+        self.recipe_bank: dict[str, Recipe] = None
+        self.prev_recipe_ids: list[int] = None
+        self.new_recipe_ids: list[int] = None
 
-    # Call LLM to get new plan with minimal overlap
-    message = (
-        f"Recipe bank:\n{json.dumps(recipes)}\n\n"
-        f"Previous recipe_ids: {json.dumps(prev_recipe_ids)}"
-    )
-    resp = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=512,
-        system=[
-            {
-                "type": "text",
-                "text": MEAL_PLAN_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        tools=[CREATE_MEAL_PLAN_TOOL],
-        tool_choice={"type": "tool", "name": "create_meal_plan"},
-        messages=[
-            {
-                "role": "user",
-                "content": message,
-            }
-        ],
-    )
+    async def _fetch_recipe_bank(self) -> None:
+        recipe_bank_list = await self.recipe_store.get_all()
+        self.recipe_bank = {r.id: r for r in recipe_bank_list}
 
-    # Validate recipe_ids
-    recipe_ids = resp.content[0].input["recipe_ids"]
-    notes = resp.content[0].input["notes"]
-
-    # Raise exception if picked a non-existent recipe_id
-    missing_recipe_ids = [rid for rid in recipe_ids if rid not in recipes]
-    if missing_recipe_ids:
-        raise Exception(f"Could not find recipe_ids: {missing_recipe_ids}")
-
-    async with transaction():
-        # Create weekly_plan
-        weekly_plan = WeeklyPlan(
-            timestamp=utils.date.this_monday(),
-            recipe_ids=recipe_ids,
-            created_at=utils.date.today(),
+    async def _fetch_prev_recipe_ids(self) -> None:
+        prev_weekly_plan = (
+            await self.weekly_plan_store.get_last_weekly_plan_recipe_ids()
         )
-        weekly_plan_id = await weekly_plan_store.create(weekly_plan, commit=False)
+        self.prev_recipe_ids = prev_weekly_plan.recipe_ids if prev_weekly_plan else []
 
-        # Aggregate ingredients
-        agg_ingredients = defaultdict(float)
-        for recipe_id in recipe_ids:
-            recipe = recipes[recipe_id]
-            for ing in recipe.ingredients:
-                key = f"{ing.name}-{ing.unit}"
-                agg_ingredients[key] += ing.amount
+    async def _get_recommended_recipes(self) -> None:
+        recipe_bank_short = {
+            rid: {"name": r.name, "tags": r.tags} for rid, r in self.recipe_bank.items()
+        }
+        message = (
+            f"Recipe bank:\n{json.dumps(recipe_bank_short)}\n\n"
+            f"Previous recipe_ids: {json.dumps(self.prev_recipe_ids)}"
+        )
+        resp = await self.client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=512,
+            system=[
+                {
+                    "type": "text",
+                    "text": MEAL_PLAN_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            tools=[CREATE_MEAL_PLAN_TOOL],
+            tool_choice={"type": "tool", "name": "create_meal_plan"},
+            messages=[
+                {
+                    "role": "user",
+                    "content": message,
+                }
+            ],
+        )
 
-        # Create shopping_items
-        shopping_items = []
-        shopping_item_store = ShoppingItemStore()
-        for key, amount in agg_ingredients.items():
-            name, unit = key.split("-")
-            shopping_item = ShoppingItem(
-                weekly_plan_id=weekly_plan_id,
-                ingredient_name=name,
-                unit=unit,
-                amount=amount,
+        # Parse outputs
+        recipe_ids = resp.content[0].input["recipe_ids"]
+        notes = resp.content[0].input["notes"]
+        print("LLM Notes", notes)
+
+        # Raise exception if picked a non-existent recipe_id
+        missing_recipe_ids = [
+            rid for rid in recipe_ids if rid not in self.recipe_bank_dict
+        ]
+        if missing_recipe_ids:
+            raise Exception(f"Could not find recipe_ids: {missing_recipe_ids}")
+
+        self.new_recipe_ids = recipe_ids
+
+    async def _persist_weekly_plan(self) -> None:
+        async with transaction():
+            # Create weekly_plan
+            weekly_plan = WeeklyPlan(
+                timestamp=utils.date.this_monday(),
+                recipe_ids=self.new_recipe_ids,
+                created_at=utils.date.today(),
             )
-            shopping_items.append(shopping_item)
-            await shopping_item_store.create(shopping_item, commit=False)
+            weekly_plan_id = await self.weekly_plan_store.create(
+                weekly_plan, commit=False
+            )
+
+            # Aggregate ingredients
+            agg_ingredients = defaultdict(float)
+            for recipe_id in self.new_recipe_ids:
+                recipe = self.recipe_bank[recipe_id]
+                for ing in recipe.ingredients:
+                    key = f"{ing.name}-{ing.unit}"
+                    agg_ingredients[key] += ing.amount
+
+            # Create shopping_items
+            shopping_items = []
+            shopping_item_store = ShoppingItemStore()
+            for key, amount in self.agg_ingredients.items():
+                name, unit = key.split("-")
+                shopping_item = ShoppingItem(
+                    weekly_plan_id=weekly_plan_id,
+                    ingredient_name=name,
+                    unit=unit,
+                    amount=amount,
+                )
+                shopping_items.append(shopping_item)
+                await shopping_item_store.create(shopping_item, commit=False)
+
+    async def run(self) -> str:
+        self._fetch_recipe_bank()
+        self._fetch_prev_recipe_ids()
+        self._get_recommended_recipes()
+        self._persist_weekly_plan()
+        # TODO: Return weekly plan + ingredients + notes
