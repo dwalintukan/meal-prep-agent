@@ -25,7 +25,7 @@ class MealPlanWorkflow:
         self.weekly_plan_store = weekly_plan_store
         self.shopping_item_store = shopping_item_store
 
-        self.recipe_bank: dict[str, Recipe] | None = None
+        self.recipe_bank: dict[int, Recipe] | None = None
         self.prev_recipe_ids: list[int] | None = None
         self.new_recipe_ids: list[int] | None = None
         self.new_weekly_plan: WeeklyPlan | None = None
@@ -75,11 +75,9 @@ class MealPlanWorkflow:
         print("LLM Notes", notes)
 
         # Raise exception if picked a non-existent recipe_id
-        missing_recipe_ids = [
-            rid for rid in recipe_ids if rid not in self.recipe_bank_dict
-        ]
+        missing_recipe_ids = [rid for rid in recipe_ids if rid not in self.recipe_bank]
         if missing_recipe_ids:
-            raise Exception(f"Could not find recipe_ids: {missing_recipe_ids}")
+            raise AttributeError(f"Could not find recipe_ids: {missing_recipe_ids}")
 
         self.new_recipe_ids = recipe_ids
 
@@ -104,9 +102,7 @@ class MealPlanWorkflow:
                     agg_ingredients[key] += ing.amount
 
             # Create shopping_items
-            shopping_items = []
-            shopping_item_store = ShoppingItemStore()
-            for key, amount in self.agg_ingredients.items():
+            for key, amount in agg_ingredients.items():
                 name, unit = key.split("-")
                 shopping_item = ShoppingItem(
                     weekly_plan_id=weekly_plan_id,
@@ -114,8 +110,8 @@ class MealPlanWorkflow:
                     unit=unit,
                     amount=amount,
                 )
-                shopping_items.append(shopping_item)
-                await shopping_item_store.create(shopping_item, commit=False)
+                self.new_shopping_items.append(shopping_item)
+                await self.shopping_item_store.create(shopping_item, commit=False)
 
     def _format_message(self) -> str:
         recipe_strs = []
@@ -126,14 +122,14 @@ class MealPlanWorkflow:
 
         shopping_strs = []
         for si in self.new_shopping_items:
-            shopping_strs.append(f"- {si.name} {si.unit} {si.amount}")
+            shopping_strs.append(f"- {si.ingredient_name} {si.unit} {si.amount}")
         shopping_lines = "\n".join(shopping_strs)
 
         return f"**Week of {self.new_weekly_plan.timestamp.isoformat()}**\n{meal_lines}\n\n**Shopping List**\n{shopping_lines}"
 
     async def run(self) -> str:
-        self._fetch_recipe_bank()
-        self._fetch_prev_recipe_ids()
-        self._get_recommended_recipes()
-        self._persist_weekly_plan()
+        await self._fetch_recipe_bank()
+        await self._fetch_prev_recipe_ids()
+        await self._get_recommended_recipes()
+        await self._persist_weekly_plan()
         return self._format_message()
