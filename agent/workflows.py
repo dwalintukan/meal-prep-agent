@@ -25,11 +25,11 @@ class MealPlanWorkflow:
         self.weekly_plan_store = weekly_plan_store
         self.shopping_item_store = shopping_item_store
 
-        self.recipe_bank: dict[int, Recipe] | None = None
-        self.prev_recipe_ids: list[int] | None = None
-        self.new_recipe_ids: list[int] | None = None
+        self.recipe_bank: dict[int, Recipe] = {}
+        self.prev_recipe_ids: list[int] = []
+        self.new_recipe_ids: list[int] = []
         self.new_weekly_plan: WeeklyPlan | None = None
-        self.new_shopping_items: list[ShoppingItem] | None = None
+        self.new_shopping_items: list[ShoppingItem] = []
 
     async def _fetch_recipe_bank(self) -> None:
         recipe_bank_list = await self.recipe_store.get_all()
