@@ -1,7 +1,7 @@
 from typing import Protocol
+import aiosqlite
 
 from models import ShoppingItem
-from storage.db import get_db
 
 
 class IShoppingItemStore(Protocol):
@@ -14,9 +14,11 @@ class IShoppingItemStore(Protocol):
 
 
 class ShoppingItemStore:
+    def __init__(self, db: aiosqlite.Connection):
+        self.db = db
+
     async def create(self, item: ShoppingItem, commit: bool = True) -> int:
-        db = get_db()
-        cur = await db.execute(
+        cur = await self.db.execute(
             "INSERT INTO shopping_items (weekly_plan_id, ingredient_name, unit, amount) "
             "VALUES (?, ?, ?, ?)",
             (
@@ -27,12 +29,11 @@ class ShoppingItemStore:
             ),
         )
         if commit:
-            await db.commit()
+            await self.db.commit()
         return cur.lastrowid
 
     async def get(self, id: int) -> ShoppingItem | None:
-        db = get_db()
-        async with db.execute(
+        async with self.db.execute(
             "SELECT * FROM shopping_items WHERE id = ?", (id,)
         ) as cur:
             row = await cur.fetchone()
@@ -41,31 +42,27 @@ class ShoppingItemStore:
         return self._row_to_item(row)
 
     async def get_all(self) -> list[ShoppingItem]:
-        db = get_db()
-        async with db.execute("SELECT * FROM shopping_items") as cur:
+        async with self.db.execute("SELECT * FROM shopping_items") as cur:
             rows = await cur.fetchall()
         return [self._row_to_item(row) for row in rows]
 
     async def get_by_weekly_plan(self, weekly_plan_id: int) -> list[ShoppingItem]:
-        db = get_db()
-        async with db.execute(
+        async with self.db.execute(
             "SELECT * FROM shopping_items WHERE weekly_plan_id = ?", (weekly_plan_id,)
         ) as cur:
             rows = await cur.fetchall()
         return [self._row_to_item(row) for row in rows]
 
     async def update(self, id: int, item: ShoppingItem) -> None:
-        db = get_db()
-        await db.execute(
+        await self.db.execute(
             "UPDATE shopping_items SET weekly_plan_id=?, ingredient_name=?, unit=?, amount=? WHERE id=?",
             (item.weekly_plan_id, item.ingredient_name, item.unit, item.amount, id),
         )
-        await db.commit()
+        await self.db.commit()
 
     async def delete(self, id: int) -> None:
-        db = get_db()
-        await db.execute("DELETE FROM shopping_items WHERE id = ?", (id,))
-        await db.commit()
+        await self.db.execute("DELETE FROM shopping_items WHERE id = ?", (id,))
+        await self.db.commit()
 
     @staticmethod
     def _row_to_item(row) -> ShoppingItem:

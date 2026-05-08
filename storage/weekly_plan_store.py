@@ -1,9 +1,9 @@
 import json
 from datetime import datetime, date
 from typing import Protocol
+import aiosqlite
 
 from models import WeeklyPlan
-from storage.db import get_db
 import utils.date
 
 
@@ -16,9 +16,11 @@ class IWeeklyPlanStore(Protocol):
 
 
 class WeeklyPlanStore:
+    def __init__(self, db: aiosqlite.Connection):
+        self.db = db
+
     async def create(self, plan: WeeklyPlan, commit: bool = True) -> int:
-        db = get_db()
-        cur = await db.execute(
+        cur = await self.db.execute(
             "INSERT INTO weekly_plans (timestamp, recipe_ids, created_at) VALUES (?, ?, ?)",
             (
                 plan.timestamp.isoformat(),
@@ -27,12 +29,13 @@ class WeeklyPlanStore:
             ),
         )
         if commit:
-            await db.commit()
+            await self.db.commit()
         return cur.lastrowid
 
     async def get(self, id: int) -> WeeklyPlan | None:
-        db = get_db()
-        async with db.execute("SELECT * FROM weekly_plans WHERE id = ?", (id,)) as cur:
+        async with self.db.execute(
+            "SELECT * FROM weekly_plans WHERE id = ?", (id,)
+        ) as cur:
             row = await cur.fetchone()
         if row is None:
             return None
@@ -41,8 +44,7 @@ class WeeklyPlanStore:
     async def get_last_weekly_plan_recipe_ids(self) -> WeeklyPlan | None:
         last_monday = utils.date.last_monday()
 
-        db = get_db()
-        async with db.execute(
+        async with self.db.execute(
             "SELECT * FROM weekly_plans WHERE timestamp = ? LIMIT 1",
             (last_monday.isoformat(),),
         ) as cur:
@@ -52,14 +54,12 @@ class WeeklyPlanStore:
         return self._row_to_plan(row)
 
     async def get_all(self) -> list[WeeklyPlan]:
-        db = get_db()
-        async with db.execute("SELECT * FROM weekly_plans") as cur:
+        async with self.db.execute("SELECT * FROM weekly_plans") as cur:
             rows = await cur.fetchall()
         return [self._row_to_plan(row) for row in rows]
 
     async def update(self, plan: WeeklyPlan) -> None:
-        db = get_db()
-        await db.execute(
+        await self.db.execute(
             "UPDATE weekly_plans SET timestamp=?, recipe_ids=?, created_at=? WHERE id=?",
             (
                 plan.timestamp.isoformat(),
@@ -68,12 +68,11 @@ class WeeklyPlanStore:
                 plan.id,
             ),
         )
-        await db.commit()
+        await self.db.commit()
 
     async def delete(self, id: int) -> None:
-        db = get_db()
-        await db.execute("DELETE FROM weekly_plans WHERE id = ?", (id,))
-        await db.commit()
+        await self.db.execute("DELETE FROM weekly_plans WHERE id = ?", (id,))
+        await self.db.commit()
 
     @staticmethod
     def _row_to_plan(row) -> WeeklyPlan:

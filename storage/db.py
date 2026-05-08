@@ -4,7 +4,19 @@ import aiosqlite
 from pathlib import Path
 from yoyo import read_migrations, get_backend
 
-_db: aiosqlite.Connection | None = None
+
+async def init_db(path: str) -> aiosqlite.Connection:
+    # Apply migrations
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    apply_migrations(path)
+
+    # Connect to DB
+    db = await aiosqlite.connect(path)
+    db.row_factory = aiosqlite.Row
+    await db.execute("PRAGMA journal_mode=WAL")
+    await db.execute("PRAGMA foreign_keys = ON")
+
+    return db
 
 
 # Synchronously apply migrations
@@ -16,31 +28,8 @@ def apply_migrations(db_path: str) -> None:
             backend.apply_one(migration)
 
 
-async def init_db(path: str) -> None:
-    global _db
-
-    if _db is not None:
-        return
-
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    apply_migrations(path)
-
-    _db = await aiosqlite.connect(path)
-    _db.row_factory = aiosqlite.Row
-    await _db.execute("PRAGMA journal_mode=WAL")
-    await _db.execute("PRAGMA foreign_keys = ON")
-
-
-def get_db() -> aiosqlite.Connection:
-    if _db is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
-
-    return _db
-
-
 @asynccontextmanager
-async def transaction() -> AsyncGenerator[Any, Any]:
-    db = get_db()
+async def transaction(db: aiosqlite.Connection) -> AsyncGenerator[Any, Any]:
     await db.execute("BEGIN")
     try:
         yield db
@@ -50,9 +39,5 @@ async def transaction() -> AsyncGenerator[Any, Any]:
         raise
 
 
-async def close_db() -> None:
-    global _db
-
-    if _db is not None:
-        await _db.close()
-        _db = None
+async def close_db(db: aiosqlite.Connection) -> None:
+    await db.close()
