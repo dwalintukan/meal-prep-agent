@@ -14,14 +14,14 @@ CLASSIFY_INTENT_TOOL = {
 
 CREATE_MEAL_PLAN_TOOL = {
     "name": "create_meal_plan",
-    "description": "Select exactly 5 recipes from the recipe bank for the upcoming week (Mon-Fri). Minimize overlap with last week. Always call this tool.",
+    "description": "Select exactly 5 recipes from the recipe bank for the upcoming week (Mon-Fri). Minimize overlap with the previous week recipe_ids.",
     "input_schema": {
         "type": "object",
         "properties": {
             "recipe_ids": {
                 "type": "array",
                 "items": {"type": "number"},
-                "minItems": 5,
+                "minItems": 0,
                 "maxItems": 5,
             },
             "notes": {"type": "string"},  # rationale + any caveats
