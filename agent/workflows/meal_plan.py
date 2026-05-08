@@ -70,9 +70,12 @@ class MealPlanWorkflow:
         # Parse outputs
         recipe_ids = resp.content[0].input["recipe_ids"]
         notes = resp.content[0].input["notes"]
+        print("Picked recipe_ids:", recipe_ids)
 
         # Raise exception if picked a non-existent recipe_id
-        missing_recipe_ids = [rid for rid in recipe_ids if rid not in self.recipe_bank]
+        missing_recipe_ids = [
+            rid for rid in recipe_ids if rid is not None and rid not in self.recipe_bank
+        ]
         if missing_recipe_ids:
             raise ValueError(f"Could not find recipe_ids: {missing_recipe_ids}")
 
