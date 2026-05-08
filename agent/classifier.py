@@ -36,7 +36,9 @@ async def classify(message: str, client: AsyncAnthropic) -> ClassifiedIntent:
             }
         ],
     )
+    print("Classifier response:", resp)
 
     intent = resp.content[0].input["intent"]
     confidence = resp.content[0].input["confidence"]
+    print(f"Intent: {intent} {confidence}")
     return ClassifiedIntent(intent=intent, confidence=confidence)

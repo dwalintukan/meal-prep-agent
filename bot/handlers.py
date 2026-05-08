@@ -9,15 +9,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     # Classify and route to proper workflow
-    reply = await route(
-        update.message,
+    user_message = update.message.text
+    print("User:", user_message)
+
+    bot_reply = await route(
+        user_message,
         context.bot_data["anthropic_client"],
         context.bot_data["recipe_store"],
         context.bot_data["weekly_plan_store"],
         context.bot_data["shopping_item_store"],
     )
+    print("Bot:", bot_reply)
 
-    for chunk in split_message(reply, limit=4096):
+    for chunk in split_message(bot_reply, limit=4096):
         await update.message.reply_text(chunk, parse_mode="Markdown")
 
 

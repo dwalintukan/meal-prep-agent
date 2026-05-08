@@ -1,9 +1,10 @@
 import os
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
-from telegram.ext import Application
+from telegram.ext import Application, MessageHandler, filters
 
 from storage import init_db, close_db, RecipeStore, WeeklyPlanStore, ShoppingItemStore
+from .handlers import handle_message
 
 
 async def post_init(application: Application) -> None:
@@ -36,4 +37,5 @@ def run() -> None:
         .post_shutdown(post_shutdown)
         .build()
     )
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling()

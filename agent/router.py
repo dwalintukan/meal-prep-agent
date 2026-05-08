@@ -12,12 +12,12 @@ async def route(
     weekly_plan_store: WeeklyPlanStore,
     shopping_item_store: ShoppingItemStore,
 ) -> str:
-    intent = await classify(message, client)
-    match intent:
+    classified_intent = await classify(message, client)
+    match classified_intent.intent:
         case Intent.PLAN:
             return await MealPlanWorkflow(
                 client, recipe_store, weekly_plan_store, shopping_item_store
             ).run()
 
         case Intent.CHAT:
-            return ChatWorkflow().run()
+            return await ChatWorkflow().run()
