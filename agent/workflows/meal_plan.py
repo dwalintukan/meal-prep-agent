@@ -25,6 +25,7 @@ class MealPlanWorkflow:
         self.recipe_bank: dict[int, Recipe] = {}
         self.prev_recipe_ids: list[int] = []
         self.new_recipe_ids: list[int] = []
+        self.llm_notes: str | None = None
         self.new_weekly_plan: WeeklyPlan | None = None
         self.new_shopping_items: list[ShoppingItem] = []
 
