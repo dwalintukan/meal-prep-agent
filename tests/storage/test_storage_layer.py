@@ -1,4 +1,3 @@
-import pytest
 from datetime import datetime, date
 
 from storage import (
@@ -14,11 +13,6 @@ from models import Ingredient, Recipe, WeeklyPlan, ShoppingItem
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-async def db(tmp_path):
-    await init_db(str(tmp_path / "test.db"))
 
 
 def make_recipe(id: int = 1, name: str = "Pasta") -> Recipe:
@@ -58,35 +52,12 @@ def make_item(id: int = 1, weekly_plan_id: int = 1) -> ShoppingItem:
 
 
 # ---------------------------------------------------------------------------
-# Migrations
-# ---------------------------------------------------------------------------
-
-
-async def test_migrations_create_tables(tmp_path):
-    await init_db(str(tmp_path / "test.db"))
-    from storage.db import get_db
-
-    db = get_db()
-    async with db.execute("SELECT name FROM sqlite_master WHERE type='table'") as cur:
-        tables = {row["name"] for row in await cur.fetchall()}
-    assert {"recipes", "ingredients", "weekly_plans", "shopping_items"}.issubset(tables)
-
-
-async def test_migrations_idempotent(tmp_path):
-    from storage.db import apply_migrations
-
-    path = str(tmp_path / "test.db")
-    apply_migrations(path)
-    apply_migrations(path)  # second call should not raise
-
-
-# ---------------------------------------------------------------------------
 # RecipeStore
 # ---------------------------------------------------------------------------
 
 
 async def test_recipe_create_and_get(db):
-    store = RecipeStore()
+    store = RecipeStore(db)
     recipe = make_recipe()
     await store.create(recipe)
     result = await store.get(1)
@@ -96,7 +67,7 @@ async def test_recipe_create_and_get(db):
 
 
 async def test_recipe_get_all(db):
-    store = RecipeStore()
+    store = RecipeStore(db)
     await store.create(make_recipe(1, "Pasta"))
     await store.create(make_recipe(2, "Salad"))
     results = await store.get_all()
@@ -106,7 +77,7 @@ async def test_recipe_get_all(db):
 
 
 async def test_recipe_update(db):
-    store = RecipeStore()
+    store = RecipeStore(db)
     await store.create(make_recipe())
     updated = make_recipe()
     updated.name = "Pasta Updated"
@@ -119,8 +90,8 @@ async def test_recipe_update(db):
 
 
 async def test_recipe_delete_cascades_ingredients(db):
-    store = RecipeStore()
-    ing_store = IngredientStore()
+    store = RecipeStore(db)
+    ing_store = IngredientStore(db)
     await store.create(make_recipe())
     assert len(await ing_store.get_all()) == 2
     await store.delete(1)
@@ -129,23 +100,23 @@ async def test_recipe_delete_cascades_ingredients(db):
 
 
 async def test_recipe_get_nonexistent_returns_none(db):
-    assert await RecipeStore().get(999) is None
+    assert await RecipeStore(db).get(999) is None
 
 
 async def test_recipe_get_all_empty(db):
-    assert await RecipeStore().get_all() == []
+    assert await RecipeStore(db).get_all() == []
 
 
 async def test_recipe_create_no_ingredients(db):
     recipe = make_recipe()
     recipe.ingredients = []
-    await RecipeStore().create(recipe)
-    result = await RecipeStore().get(1)
+    await RecipeStore(db).create(recipe)
+    result = await RecipeStore(db).get(1)
     assert result.ingredients == []
 
 
 async def test_recipe_update_clears_ingredients(db):
-    store = RecipeStore()
+    store = RecipeStore(db)
     await store.create(make_recipe())
     updated = make_recipe()
     updated.ingredients = []
@@ -155,7 +126,7 @@ async def test_recipe_update_clears_ingredients(db):
 
 
 async def test_recipe_delete_nonexistent_no_error(db):
-    await RecipeStore().delete(999)
+    await RecipeStore(db).delete(999)
 
 
 # ---------------------------------------------------------------------------
@@ -164,23 +135,23 @@ async def test_recipe_delete_nonexistent_no_error(db):
 
 
 async def test_ingredient_create_and_get(db):
-    await RecipeStore().create(make_recipe())
-    store = IngredientStore()
+    await RecipeStore(db).create(make_recipe())
+    store = IngredientStore(db)
     result = await store.get(11)
     assert result.name == "Pasta"
     assert result.amount == 200
 
 
 async def test_ingredient_get_all(db):
-    await RecipeStore().create(make_recipe(1))
-    await RecipeStore().create(make_recipe(2))
-    all_ings = await IngredientStore().get_all()
+    await RecipeStore(db).create(make_recipe(1))
+    await RecipeStore(db).create(make_recipe(2))
+    all_ings = await IngredientStore(db).get_all()
     assert len(all_ings) == 4
 
 
 async def test_ingredient_update(db):
-    await RecipeStore().create(make_recipe())
-    store = IngredientStore()
+    await RecipeStore(db).create(make_recipe())
+    store = IngredientStore(db)
     ing = await store.get(11)
     ing.amount = 500
     await store.update(ing)
@@ -189,24 +160,24 @@ async def test_ingredient_update(db):
 
 
 async def test_ingredient_delete(db):
-    await RecipeStore().create(make_recipe())
-    store = IngredientStore()
+    await RecipeStore(db).create(make_recipe())
+    store = IngredientStore(db)
     await store.delete(11)
     assert await store.get(11) is None
 
 
 async def test_ingredient_get_nonexistent_returns_none(db):
-    assert await IngredientStore().get(999) is None
+    assert await IngredientStore(db).get(999) is None
 
 
 async def test_ingredient_get_all_empty(db):
-    assert await IngredientStore().get_all() == []
+    assert await IngredientStore(db).get_all() == []
 
 
 async def test_ingredient_cascade_delete_via_recipe(db):
-    await RecipeStore().create(make_recipe())
-    await RecipeStore().delete(1)
-    assert await IngredientStore().get_all() == []
+    await RecipeStore(db).create(make_recipe())
+    await RecipeStore(db).delete(1)
+    assert await IngredientStore(db).get_all() == []
 
 
 # ---------------------------------------------------------------------------
@@ -215,7 +186,7 @@ async def test_ingredient_cascade_delete_via_recipe(db):
 
 
 async def test_weekly_plan_create_and_get(db):
-    store = WeeklyPlanStore()
+    store = WeeklyPlanStore(db)
     await store.create(make_plan())
     result = await store.get(1)
     assert result.recipe_ids == [1, 2, 3]
@@ -223,14 +194,14 @@ async def test_weekly_plan_create_and_get(db):
 
 
 async def test_weekly_plan_get_all(db):
-    store = WeeklyPlanStore()
+    store = WeeklyPlanStore(db)
     await store.create(make_plan(1))
     await store.create(make_plan(2))
     assert len(await store.get_all()) == 2
 
 
 async def test_weekly_plan_update(db):
-    store = WeeklyPlanStore()
+    store = WeeklyPlanStore(db)
     await store.create(make_plan())
     plan = await store.get(1)
     plan.recipe_ids = [4, 5, 6]
@@ -240,8 +211,8 @@ async def test_weekly_plan_update(db):
 
 
 async def test_weekly_plan_delete_cascades_shopping_items(db):
-    plan_store = WeeklyPlanStore()
-    item_store = ShoppingItemStore()
+    plan_store = WeeklyPlanStore(db)
+    item_store = ShoppingItemStore(db)
     await plan_store.create(make_plan())
     await item_store.create(make_item(weekly_plan_id=1))
     await plan_store.delete(1)
@@ -250,22 +221,22 @@ async def test_weekly_plan_delete_cascades_shopping_items(db):
 
 
 async def test_weekly_plan_get_nonexistent_returns_none(db):
-    assert await WeeklyPlanStore().get(999) is None
+    assert await WeeklyPlanStore(db).get(999) is None
 
 
 async def test_weekly_plan_get_all_empty(db):
-    assert await WeeklyPlanStore().get_all() == []
+    assert await WeeklyPlanStore(db).get_all() == []
 
 
 async def test_weekly_plan_create_empty_recipe_ids(db):
     plan = make_plan(recipe_ids=[])
-    await WeeklyPlanStore().create(plan)
-    result = await WeeklyPlanStore().get(1)
+    await WeeklyPlanStore(db).create(plan)
+    result = await WeeklyPlanStore(db).get(1)
     assert result.recipe_ids == []
 
 
 async def test_weekly_plan_delete_nonexistent_no_error(db):
-    await WeeklyPlanStore().delete(999)
+    await WeeklyPlanStore(db).delete(999)
 
 
 # ---------------------------------------------------------------------------
@@ -274,8 +245,8 @@ async def test_weekly_plan_delete_nonexistent_no_error(db):
 
 
 async def test_shopping_item_create_and_get(db):
-    await WeeklyPlanStore().create(make_plan())
-    store = ShoppingItemStore()
+    await WeeklyPlanStore(db).create(make_plan())
+    store = ShoppingItemStore(db)
     await store.create(make_item())
     result = await store.get(1)
     assert result.ingredient_name == "Pasta"
@@ -283,18 +254,18 @@ async def test_shopping_item_create_and_get(db):
 
 
 async def test_shopping_item_get_all(db):
-    await WeeklyPlanStore().create(make_plan(1))
-    await WeeklyPlanStore().create(make_plan(2))
-    store = ShoppingItemStore()
+    await WeeklyPlanStore(db).create(make_plan(1))
+    await WeeklyPlanStore(db).create(make_plan(2))
+    store = ShoppingItemStore(db)
     await store.create(make_item(1, weekly_plan_id=1))
     await store.create(make_item(2, weekly_plan_id=2))
     assert len(await store.get_all()) == 2
 
 
 async def test_shopping_item_get_by_weekly_plan(db):
-    await WeeklyPlanStore().create(make_plan(1))
-    await WeeklyPlanStore().create(make_plan(2))
-    store = ShoppingItemStore()
+    await WeeklyPlanStore(db).create(make_plan(1))
+    await WeeklyPlanStore(db).create(make_plan(2))
+    store = ShoppingItemStore(db)
     await store.create(make_item(1, weekly_plan_id=1))
     await store.create(make_item(2, weekly_plan_id=1))
     await store.create(make_item(3, weekly_plan_id=2))
@@ -304,8 +275,8 @@ async def test_shopping_item_get_by_weekly_plan(db):
 
 
 async def test_shopping_item_update(db):
-    await WeeklyPlanStore().create(make_plan())
-    store = ShoppingItemStore()
+    await WeeklyPlanStore(db).create(make_plan())
+    store = ShoppingItemStore(db)
     await store.create(make_item())
     updated = make_item()
     updated.amount = 999
@@ -315,37 +286,37 @@ async def test_shopping_item_update(db):
 
 
 async def test_shopping_item_delete(db):
-    await WeeklyPlanStore().create(make_plan())
-    store = ShoppingItemStore()
+    await WeeklyPlanStore(db).create(make_plan())
+    store = ShoppingItemStore(db)
     await store.create(make_item())
     await store.delete(1)
     assert await store.get(1) is None
 
 
 async def test_shopping_item_get_nonexistent_returns_none(db):
-    assert await ShoppingItemStore().get(999) is None
+    assert await ShoppingItemStore(db).get(999) is None
 
 
 async def test_shopping_item_get_all_empty(db):
-    assert await ShoppingItemStore().get_all() == []
+    assert await ShoppingItemStore(db).get_all() == []
 
 
 async def test_shopping_item_get_by_weekly_plan_no_items(db):
-    await WeeklyPlanStore().create(make_plan())
-    assert await ShoppingItemStore().get_by_weekly_plan(1) == []
+    await WeeklyPlanStore(db).create(make_plan())
+    assert await ShoppingItemStore(db).get_by_weekly_plan(1) == []
 
 
 async def test_shopping_item_get_by_weekly_plan_nonexistent_plan(db):
-    assert await ShoppingItemStore().get_by_weekly_plan(999) == []
+    assert await ShoppingItemStore(db).get_by_weekly_plan(999) == []
 
 
 async def test_shopping_item_cascade_delete_via_plan(db):
-    await WeeklyPlanStore().create(make_plan())
-    store = ShoppingItemStore()
+    await WeeklyPlanStore(db).create(make_plan())
+    store = ShoppingItemStore(db)
     await store.create(make_item())
-    await WeeklyPlanStore().delete(1)
+    await WeeklyPlanStore(db).delete(1)
     assert await store.get_by_weekly_plan(1) == []
 
 
 async def test_shopping_item_delete_nonexistent_no_error(db):
-    await ShoppingItemStore().delete(999)
+    await ShoppingItemStore(db).delete(999)

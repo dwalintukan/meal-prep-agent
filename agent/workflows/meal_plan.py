@@ -79,7 +79,7 @@ class MealPlanWorkflow:
         self.new_recipe_ids = recipe_ids
 
     async def _persist_weekly_plan(self) -> None:
-        async with transaction():
+        async with transaction(self.weekly_plan_store.db):
             # Create weekly_plan
             self.new_weekly_plan = WeeklyPlan(
                 timestamp=utils.date.this_monday(),

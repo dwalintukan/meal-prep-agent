@@ -1,6 +1,7 @@
 from typing import Protocol
+
+import aiosqlite
 from models.domain import Ingredient
-from storage.db import get_db
 
 
 class IIngredientStore(Protocol):
@@ -12,9 +13,11 @@ class IIngredientStore(Protocol):
 
 
 class IngredientStore:
+    def __init__(self, db: aiosqlite.Connection):
+        self.db = db
+
     async def create(self, ingredient: Ingredient, recipe_id: int) -> None:
-        db = get_db()
-        await db.execute(
+        await self.db.execute(
             "INSERT INTO ingredients (id, recipe_id, name, unit, amount) VALUES (?, ?, ?, ?, ?)",
             (
                 ingredient.id,
@@ -24,11 +27,12 @@ class IngredientStore:
                 ingredient.amount,
             ),
         )
-        await db.commit()
+        await self.db.commit()
 
     async def get(self, id: int) -> Ingredient | None:
-        db = get_db()
-        async with db.execute("SELECT * FROM ingredients WHERE id = ?", (id,)) as cur:
+        async with self.db.execute(
+            "SELECT * FROM ingredients WHERE id = ?", (id,)
+        ) as cur:
             row = await cur.fetchone()
         if row is None:
             return None
@@ -37,8 +41,7 @@ class IngredientStore:
         )
 
     async def get_all(self) -> list[Ingredient]:
-        db = get_db()
-        async with db.execute("SELECT * FROM ingredients") as cur:
+        async with self.db.execute("SELECT * FROM ingredients") as cur:
             rows = await cur.fetchall()
         return [
             Ingredient(id=r["id"], name=r["name"], unit=r["unit"], amount=r["amount"])
@@ -46,14 +49,12 @@ class IngredientStore:
         ]
 
     async def update(self, ingredient: Ingredient) -> None:
-        db = get_db()
-        await db.execute(
+        await self.db.execute(
             "UPDATE ingredients SET name=?, unit=?, amount=? WHERE id=?",
             (ingredient.name, ingredient.unit, ingredient.amount, ingredient.id),
         )
-        await db.commit()
+        await self.db.commit()
 
     async def delete(self, id: int) -> None:
-        db = get_db()
-        await db.execute("DELETE FROM ingredients WHERE id = ?", (id,))
-        await db.commit()
+        await self.db.execute("DELETE FROM ingredients WHERE id = ?", (id,))
+        await self.db.commit()

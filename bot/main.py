@@ -7,13 +7,16 @@ from storage import init_db, close_db
 
 
 async def post_init(application: Application) -> None:
-    await init_db(os.getenv("DATABASE_PATH", "data/meal_prep.db"))
+    application.bot_data["db"] = await init_db(
+        os.getenv("DATABASE_PATH", "data/meal_prep.db")
+    )
     application.bot_data["anthropic_client"] = AsyncAnthropic()
     print("Bot is ready for your command 🤖")
 
 
 async def post_shutdown(application: Application) -> None:
-    await close_db()
+    db = application.bot_data["db"]
+    await close_db(db)
 
 
 def run() -> None:

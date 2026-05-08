@@ -19,6 +19,7 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["."]
 filterwarnings = [
     "ignore::DeprecationWarning:yoyo",
 ]
