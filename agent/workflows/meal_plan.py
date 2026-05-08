@@ -69,7 +69,6 @@ class MealPlanWorkflow:
         # Parse outputs
         recipe_ids = resp.content[0].input["recipe_ids"]
         notes = resp.content[0].input["notes"]
-        print("LLM Notes", notes)
 
         # Raise exception if picked a non-existent recipe_id
         missing_recipe_ids = [rid for rid in recipe_ids if rid not in self.recipe_bank]
@@ -77,6 +76,7 @@ class MealPlanWorkflow:
             raise ValueError(f"Could not find recipe_ids: {missing_recipe_ids}")
 
         self.new_recipe_ids = recipe_ids
+        self.llm_notes = notes
 
     async def _persist_weekly_plan(self) -> None:
         async with transaction(self.weekly_plan_store.db):
@@ -122,7 +122,14 @@ class MealPlanWorkflow:
             shopping_strs.append(f"- {si.ingredient_name} {si.unit} {si.amount}")
         shopping_lines = "\n".join(shopping_strs)
 
-        return f"**Week of {self.new_weekly_plan.timestamp.isoformat()}**\n{meal_lines}\n\n**Shopping List**\n{shopping_lines}"
+        return (
+            f"**Week of {self.new_weekly_plan.timestamp.isoformat()}**\n"
+            f"{meal_lines}\n\n"
+            f"**Notes**\n"
+            f"{self.llm_notes}\n\n"
+            f"**Shopping List**\n"
+            f"{shopping_lines}"
+        )
 
     async def run(self) -> str:
         await self._fetch_recipe_bank()
