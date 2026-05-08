@@ -21,11 +21,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
     print("Bot:", bot_reply)
 
-    for chunk in split_message(bot_reply, limit=4096):
+    for chunk in _split_message(bot_reply, limit=4096):
         await update.message.reply_text(chunk, parse_mode="Markdown")
 
 
-def split_message(text: str, limit: int = 4096) -> list[str]:
+def _split_message(text: str, limit: int = 4096) -> list[str]:
     # Message is already under the limit, send it as whole
     if len(text) <= limit:
         return [text]
@@ -33,15 +33,15 @@ def split_message(text: str, limit: int = 4096) -> list[str]:
     chunks, curr_chunk, curr_len = [], [], 0
     for line in text.splitlines():
         line_len = len(line)
-        if curr_len + line_len <= limit:
-            # Add to current chunk if under the limit
-            curr_chunk.append(line)
-            curr_len += line_len
-        else:
-            # Append to split chunks and reset for next chunk
+        if curr_len + line_len > limit:
+            # Putting current line goes over the limit, start new chunk
             chunks.append("\n".join(curr_chunk))
             curr_chunk.clear()
             curr_len = 0
+
+        # Append to chunk and track length
+        curr_chunk.append(line)
+        curr_len += line_len + 1
 
     # Append last chunk if not empty
     if curr_len > 0:
