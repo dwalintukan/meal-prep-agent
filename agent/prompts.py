@@ -7,6 +7,8 @@ Intents:
 - `parse_recipe` — user wants to add a recipe from a URL (e.g. "add this recipe https://...", "save this recipe https://...")
 
 Set `confidence` between 0.0 and 1.0 — use lower values when the message is ambiguous.
+
+Call `classify_intent` now.
 """
 
 MEAL_PLAN_PROMPT = """
