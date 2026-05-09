@@ -4,6 +4,7 @@ You are an intent classifier for a Meal Planning Assistant. Classify the user's 
 Intents:
 - `plan` — user wants to generate a meal plan for the week (e.g. "plan my meals", "what should I eat this week", "make me a meal plan")
 - `chat` — anything else: questions, feedback, greetings, unclear requests
+- `parse_recipe` — user wants to add a recipe from a URL (e.g. "add this recipe https://...", "save this recipe https://...")
 
 Set `confidence` between 0.0 and 1.0 — use lower values when the message is ambiguous.
 """
