@@ -1,9 +1,10 @@
 from datetime import datetime
 from anthropic import AsyncAnthropic
+from pydantic import ValidationError
 
 from agent.prompts import PARSE_RECIPE_PROMPT
 from agent.tools import PARSE_RECIPE_TOOL
-from models import Ingredient, Recipe
+from models import Recipe
 from storage import RecipeStore
 
 
@@ -49,7 +50,7 @@ class ParseRecipeWorkflow:
             if resp.stop_reason == "tool_use":
                 # Claude called tool "parse_recipe"
                 break
-            elif resp.stop_reason == " pause_turn":
+            elif resp.stop_reason == "pause_turn":
                 # Append web_fetch call + result
                 # Send it back to Claude to "parse_recipe"
                 messages.append({"role": "assistant", "content": resp.content})
@@ -57,27 +58,14 @@ class ParseRecipeWorkflow:
                 raise ValueError(f"Unexpected stop_reason: {resp.stop_reason}")
 
         # Parse outputs
-        input = resp.content[0].input
-        recipe = Recipe(
-            name=input["name"],
-            instructions=input["instructions"],
-            ingredients=[
-                Ingredient(name=i["name"], amount=i["amount"], unit=i["unit"])
-                for i in input["ingredients"]
-            ],
-            servings=input["servings"],
-            prep_minutes=input["prep_minutes"],
-            cook_minutes=input["cook_minutes"],
-            tags=input["tags"],
-            created_at=datetime.today(),
-        )
-
-        # Validate all fields present
-        for key, val in recipe.items():
-            if val is None:
-                raise ValueError(f"Parsed recipe could not find: {key}")
-
-        self.recipe = recipe
+        tool_block = next(b for b in resp.content if b.type == "tool_use")
+        input = tool_block.input
+        try:
+            recipe = Recipe.model_validate({**input, "created_at": datetime.today()})
+            self.recipe = recipe
+        except ValidationError as e:
+            print(f"Error parsing Recipe: {e.errors()[0]['msg']}")
+            raise
 
     def _format_message(self) -> str:
         ingredients = []
@@ -106,7 +94,9 @@ class ParseRecipeWorkflow:
     async def run(self) -> tuple[str, Recipe | None]:
         try:
             await self._parse_url()
-        except ValueError:
+        except ValidationError:
             return f"Couldn't parse recipe from {self.url}", None
+        except ValueError as e:
+            return f"Error with LLM call: {e}", None
 
         return self._format_message(), self.recipe
