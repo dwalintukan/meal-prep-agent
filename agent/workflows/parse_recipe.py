@@ -4,7 +4,7 @@ from anthropic import AsyncAnthropic
 from agent.prompts import PARSE_RECIPE_PROMPT
 from agent.tools import PARSE_RECIPE_TOOL
 from models import Ingredient, Recipe
-from storage import RecipeStore, IngredientStore
+from storage import RecipeStore
 
 
 class ParseRecipeWorkflow:
@@ -12,12 +12,10 @@ class ParseRecipeWorkflow:
         self,
         client: AsyncAnthropic,
         recipe_store: RecipeStore,
-        ingredient_store: IngredientStore,
         url: str,
     ):
         self.client = client
         self.recipe_store = recipe_store
-        self.ingredient_store = ingredient_store
         self.url = url
 
         self.recipe: Recipe | None = None
@@ -85,11 +83,12 @@ class ParseRecipeWorkflow:
         ingredients = []
         for i in self.recipe.ingredients:
             ingredients.append(f"- {i.name} {i.amount} {i.unit}")
-        ingredient_lines = "\n".join(ingredients)
+        ingredients_concat = "\n".join(ingredients)
 
-        instruction_lines = []
+        instructions = []
         for idx, instruction in enumerate(self.recipe.instructions):
-            instruction_lines.append(f"{idx + 1}. {instruction}\n")
+            instructions.append(f"{idx + 1}. {instruction}")
+        instructions_concat = "\n".join(instructions)
 
         return (
             f"I've parsed your recipe. If it looks correct, reply with 'yes' or 'no'.\n"
@@ -99,9 +98,9 @@ class ParseRecipeWorkflow:
             f"Cook Mins: {self.recipe.cook_minutes}\n"
             f"Servings: {self.recipe.servings}\n\n"
             f"Ingredients:\n"
-            f"{ingredient_lines}\n\n"
+            f"{ingredients_concat}\n"
             f"Instructions:\n"
-            f"{instruction_lines}\n\n"
+            f"{instructions_concat}\n"
         )
 
     async def run(self) -> tuple[str, Recipe | None]:
