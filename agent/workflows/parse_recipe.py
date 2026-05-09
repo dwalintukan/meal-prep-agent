@@ -1,6 +1,7 @@
 from anthropic import AsyncAnthropic
 
 from agent.prompts import PARSE_RECIPE_PROMPT
+from agent.tools import PARSE_RECIPE_TOOL
 from storage import RecipeStore, IngredientStore
 
 
