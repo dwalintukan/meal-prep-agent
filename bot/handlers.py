@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from agent import route
+from agent.workflows import PendingAction
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -12,7 +13,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_message = update.message.text
     print("User:", user_message)
 
-    bot_reply = await route(
+    # Call LLM
+    bot_reply, pending_action = await route(
         user_message,
         context.bot_data["anthropic_client"],
         context.bot_data["recipe_store"],
@@ -21,8 +23,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
     print("Bot:", bot_reply)
 
+    # Handle multi-step actions
+    _handle_pending_action(pending_action, context)
+
     for chunk in _split_message(bot_reply, limit=4096):
         await update.message.reply_text(chunk, parse_mode="Markdown")
+
+
+def _handle_pending_action(
+    action: PendingAction | None, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    # No pending action, do nothing
+    if action is None:
+        return
+
+    match action.type:
+        case "confirm_recipe":
+            context.user_data["pending_action"] = action
 
 
 def _split_message(text: str, limit: int = 4096) -> list[str]:
