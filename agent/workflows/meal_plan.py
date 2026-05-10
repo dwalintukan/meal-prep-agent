@@ -5,7 +5,7 @@ from anthropic import AsyncAnthropic
 from agent.prompts import MEAL_PLAN_PROMPT
 from agent.tools import CREATE_MEAL_PLAN_TOOL
 from agent.workflows import Workflow
-from models.domain import Recipe, ShoppingItem, WeeklyPlan
+from models import PendingAction, Recipe, ShoppingItem, WeeklyPlan
 from storage import transaction, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 import utils.date
 
@@ -136,9 +136,9 @@ class MealPlanWorkflow(Workflow):
             f"{shopping_lines}"
         )
 
-    async def run(self) -> str:
+    async def run(self) -> tuple[str, PendingAction | None]:
         await self._fetch_recipe_bank()
         await self._fetch_prev_recipe_ids()
         await self._get_recommended_recipes()
         await self._persist_weekly_plan()
-        return self._format_message()
+        return self._format_message(), None

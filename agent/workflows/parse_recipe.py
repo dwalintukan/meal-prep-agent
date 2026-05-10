@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from agent.prompts import PARSE_RECIPE_PROMPT
 from agent.tools import PARSE_RECIPE_TOOL
 from agent.workflows import Workflow
-from models import Recipe
+from models import Recipe, PendingAction
 from storage import RecipeStore
 
 
@@ -92,7 +92,7 @@ class ParseRecipeWorkflow(Workflow):
             f"{instructions_concat}\n"
         )
 
-    async def run(self) -> tuple[str, Recipe | None]:
+    async def run(self) -> tuple[str, PendingAction | None]:
         try:
             await self._parse_url()
         except ValidationError:
@@ -100,4 +100,6 @@ class ParseRecipeWorkflow(Workflow):
         except ValueError as e:
             return f"Error with LLM call: {e}", None
 
-        return self._format_message(), self.recipe
+        return self._format_message(), PendingAction(
+            type="confirm_recipe", data={"recipe": self.recipe}
+        )
