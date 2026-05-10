@@ -79,14 +79,14 @@ class ParseRecipeWorkflow(Workflow):
         instructions_concat = "\n".join(instructions)
 
         return (
-            f"I've parsed your recipe. If it looks correct, reply with 'yes' or 'no'.\n"
+            f"I've parsed your recipe. If it looks correct, reply with 'yes' or 'no'.\n\n"
             f"Name: {self.recipe.name}\n"
             f"Tags: {', '.join(self.recipe.tags)}\n"
             f"Prep Mins: {self.recipe.prep_minutes}\n"
             f"Cook Mins: {self.recipe.cook_minutes}\n"
             f"Servings: {self.recipe.servings}\n\n"
             f"Ingredients:\n"
-            f"{ingredients_concat}\n"
+            f"{ingredients_concat}\n\n"
             f"Instructions:\n"
             f"{instructions_concat}\n"
         )
