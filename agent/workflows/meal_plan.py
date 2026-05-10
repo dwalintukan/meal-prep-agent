@@ -4,12 +4,13 @@ from anthropic import AsyncAnthropic
 
 from agent.prompts import MEAL_PLAN_PROMPT
 from agent.tools import CREATE_MEAL_PLAN_TOOL
+from agent.workflows import Workflow
 from models.domain import Recipe, ShoppingItem, WeeklyPlan
 from storage import transaction, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 import utils.date
 
 
-class MealPlanWorkflow:
+class MealPlanWorkflow(Workflow):
     def __init__(
         self,
         client: AsyncAnthropic,

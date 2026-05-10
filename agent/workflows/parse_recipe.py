@@ -4,11 +4,12 @@ from pydantic import ValidationError
 
 from agent.prompts import PARSE_RECIPE_PROMPT
 from agent.tools import PARSE_RECIPE_TOOL
+from agent.workflows import Workflow
 from models import Recipe
 from storage import RecipeStore
 
 
-class ParseRecipeWorkflow:
+class ParseRecipeWorkflow(Workflow):
     def __init__(
         self,
         client: AsyncAnthropic,
