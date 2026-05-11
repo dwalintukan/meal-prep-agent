@@ -23,7 +23,7 @@ class RecipeStore:
             pass
         cursor = await self.db.execute(
             "INSERT INTO recipes (name, instructions, servings, prep_minutes, cook_minutes, tags, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 recipe.name,
                 json.dumps(recipe.instructions),
@@ -37,7 +37,7 @@ class RecipeStore:
         recipe_id = cursor.lastrowid
         for ingredient in recipe.ingredients:
             await self.db.execute(
-                "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?)",
                 (
                     recipe_id,
                     ingredient.name,
@@ -46,7 +46,7 @@ class RecipeStore:
                 ),
             )
         await self.db.commit()
-        print(f"{recipe.name} Recipe saved")
+        print(f"Recipe created: {recipe.name}")
 
     async def get(self, id: int) -> Recipe | None:
         async with self.db.execute("SELECT * FROM recipes WHERE id = ?", (id,)) as cur:

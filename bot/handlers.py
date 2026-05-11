@@ -73,9 +73,9 @@ async def _handle_confirm_recipe_message(
         recipe_store: RecipeStore = context.bot_data["recipe_store"]
         recipe: Recipe = pending_action.data["recipe"]
         await recipe_store.create(recipe)
-        return "Recipe saved"
+        return f"I've saved your {recipe.name} Recipe for future meal plans."
     else:
-        return "Cancelled"
+        return "Cancelled saving your recipe."
 
 
 def _split_message(text: str, limit: int = 4096) -> list[str]:
@@ -105,4 +105,7 @@ def _split_message(text: str, limit: int = 4096) -> list[str]:
 
 async def _send_reply(update: Update, bot_reply: str):
     for chunk in _split_message(bot_reply, limit=4096):
-        await update.message.reply_text(chunk, parse_mode="Markdown")
+        try:
+            await update.message.reply_text(chunk, parse_mode="Markdown")
+        except Exception:
+            await update.message.reply_text(chunk)
