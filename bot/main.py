@@ -19,13 +19,14 @@ async def post_init(application: Application) -> None:
     application.bot_data["recipe_store"] = RecipeStore(db)
     application.bot_data["weekly_plan_store"] = WeeklyPlanStore(db)
     application.bot_data["shopping_item_store"] = ShoppingItemStore(db)
-    print("Initialized data stores")
+    print("Initialized database")
 
     # Init Vector DB
     chroma_client = chromadb.PersistentClient("./chroma_data")
     application.bot_data["recipe_collection"] = chroma_client.get_or_create_collection(
         "recipes"
     )
+    print("Initialized vector database")
 
     print("Meal Prep Agent is ready for your command 👨‍🍳")
 
