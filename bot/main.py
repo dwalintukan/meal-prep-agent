@@ -14,7 +14,7 @@ async def post_init(application: Application) -> None:
     print("Initialized Anthropic client")
 
     # Init DB
-    db = await init_db(os.getenv("DATABASE_PATH", "data/meal_prep.db"))
+    db = await init_db(os.getenv("DB_PATH", ".data/meal_prep.db"))
     application.bot_data["db"] = db
     application.bot_data["recipe_store"] = RecipeStore(db)
     application.bot_data["weekly_plan_store"] = WeeklyPlanStore(db)
@@ -22,7 +22,7 @@ async def post_init(application: Application) -> None:
     print("Initialized database")
 
     # Init Vector DB
-    chroma_client = chromadb.PersistentClient("./.chroma_data")
+    chroma_client = chromadb.PersistentClient(os.getenv("VECTOR_DB_PATH", ".chroma"))
     application.bot_data["recipe_collection"] = chroma_client.get_or_create_collection(
         "recipes"
     )

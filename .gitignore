@@ -55,7 +55,7 @@ dmypy.json
 # Data / secrets
 *.db
 *.sqlite3
-data/
+.data/
 .env
 .env.*
 !.env.example
@@ -109,4 +109,4 @@ $RECYCLE.BIN/
 *~
 
 # ChromaDB
-.chroma_data/
+.chroma/
