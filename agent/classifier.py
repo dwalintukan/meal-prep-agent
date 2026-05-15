@@ -1,9 +1,10 @@
 from enum import Enum
-from pydantic import BaseModel
-from anthropic import AsyncAnthropic
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage
+from langchain_anthropic import ChatAnthropic
+from pydantic import BaseModel, Field
 
 from agent.prompts import CLASSIFY_INTENT_PROMPT
-from agent.tools import CLASSIFY_INTENT_TOOL
 
 
 class Intent(str, Enum):
@@ -13,33 +14,23 @@ class Intent(str, Enum):
 
 
 class ClassifiedIntent(BaseModel):
-    intent: Intent
-    confidence: float
-
-
-async def classify(message: str, client: AsyncAnthropic) -> ClassifiedIntent:
-    resp = await client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=64,
-        system=[
-            {
-                "type": "text",
-                "text": CLASSIFY_INTENT_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        tools=[CLASSIFY_INTENT_TOOL],
-        tool_choice={"type": "tool", "name": "classify_intent"},
-        messages=[
-            {
-                "role": "user",
-                "content": f"Classify this message: {message}",
-            }
-        ],
+    intent: Intent = Field(description="Intent of the message")
+    confidence: float = Field(
+        description="Confidence of the classification from 0.0 to 1.0"
     )
-    print("Classifier response:", resp)
 
-    intent = resp.content[0].input["intent"]
-    confidence = resp.content[0].input["confidence"]
-    print(f"Intent: {intent} {confidence}")
-    return ClassifiedIntent(intent=intent, confidence=confidence)
+
+async def classify(message: str, model: ChatAnthropic) -> ClassifiedIntent:
+    classify_prompt = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(
+                content=CLASSIFY_INTENT_PROMPT,
+                additional_kwargs={"cache_control": {"type": "ephemeral"}},
+            ),
+            ("human", "Classify this message: {message}"),
+        ]
+    )
+    chain = classify_prompt | model.with_structured_output(ClassifiedIntent)
+    intent: ClassifiedIntent = await chain.ainvoke({"message": message})
+    print(f"Intent: {intent.intent} {intent.confidence}")
+    return intent
