@@ -34,6 +34,7 @@ Create an `.env` file at root and fill in:
 - `TELEGRAM_BOT_TOKEN`
 - `DB_PATH` (default: `.data/meal_prep.db`)
 - `VECTOR_DB_PATH` (default: `.chroma`)
+- `VOYAGE_API_KEY`
 
 
 ## Architecture
