@@ -1,7 +1,7 @@
 from enum import Enum
+from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage
-from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel, Field
 
 from agent.prompts import CLASSIFY_INTENT_PROMPT
@@ -20,16 +20,18 @@ class ClassifiedIntent(BaseModel):
     )
 
 
-async def classify(message: str, model: ChatAnthropic) -> ClassifiedIntent:
-    classify_prompt = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(
-                content=CLASSIFY_INTENT_PROMPT,
-                additional_kwargs={"cache_control": {"type": "ephemeral"}},
-            ),
-            ("human", "Classify this message: {message}"),
-        ]
-    )
+classify_prompt = ChatPromptTemplate.from_messages(
+    [
+        SystemMessage(
+            content=CLASSIFY_INTENT_PROMPT,
+            additional_kwargs={"cache_control": {"type": "ephemeral"}},
+        ),
+        ("human", "Classify this message: {message}"),
+    ]
+)
+
+
+async def classify(message: str, model: BaseChatModel) -> ClassifiedIntent:
     chain = classify_prompt | model.with_structured_output(ClassifiedIntent)
     intent: ClassifiedIntent = await chain.ainvoke({"message": message})
     print(f"Intent: {intent.intent} {intent.confidence}")
