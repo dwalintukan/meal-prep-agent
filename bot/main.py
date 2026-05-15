@@ -1,5 +1,5 @@
 import os
-from anthropic import AsyncAnthropic
+from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from telegram.ext import Application, MessageHandler, filters
 import chromadb
@@ -10,8 +10,11 @@ from .handlers import handle_message
 
 async def post_init(application: Application) -> None:
     # Init Anthropic client
-    application.bot_data["anthropic_client"] = AsyncAnthropic()
-    print("Initialized Anthropic client")
+    application.bot_data["llm_haiku"] = ChatAnthropic(
+        model="claude-haiku-4-5-20251001", max_tokens=64
+    )
+    application.bot_data["llm_sonnet"] = ChatAnthropic(model="claude-sonnet-4-6")
+    print("Initialized Anthropic clients")
 
     # Init DB
     db = await init_db(os.getenv("DB_PATH", ".data/meal_prep.db"))
