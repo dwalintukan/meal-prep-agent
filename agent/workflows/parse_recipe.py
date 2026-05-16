@@ -1,5 +1,5 @@
 from datetime import datetime
-from anthropic import AsyncAnthropic
+from langchain_core.language_models import BaseChatModel
 from pydantic import ValidationError
 
 from agent.prompts import PARSE_RECIPE_PROMPT
@@ -11,10 +11,10 @@ from models import Recipe, PendingAction
 class ParseRecipeWorkflow(Workflow):
     def __init__(
         self,
-        client: AsyncAnthropic,
+        model: BaseChatModel,
         url: str,
     ):
-        self.client = client
+        self.model = model
         self.url = url
 
         self.recipe: Recipe | None = None

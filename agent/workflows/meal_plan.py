@@ -47,23 +47,26 @@ class MealPlanWorkflow(Workflow):
         self.prev_recipe_ids = prev_weekly_plan.recipe_ids if prev_weekly_plan else []
 
     async def _get_recommended_recipes(self) -> None:
+        system_message = SystemMessage(
+            content=MEAL_PLAN_PROMPT,
+            additional_kwargs={"cache_control": {"type": "ephemeral"}},
+        )
         recipe_bank_short = {
             rid: {"name": r.name, "tags": r.tags} for rid, r in self.recipe_bank.items()
         }
-        human_message = (
-            f"Recipe bank:\n{json.dumps(recipe_bank_short)}\n\n"
-            f"Previous recipe_ids: {json.dumps(self.prev_recipe_ids)}"
+        human_message = HumanMessage(
+            content=(
+                f"Recipe bank:\n{json.dumps(recipe_bank_short)}\n\n"
+                f"Previous recipe_ids: {json.dumps(self.prev_recipe_ids)}"
+            )
         )
         response: MealPlanResponse = (
             await self.model.bind(max_tokens=512)
             .with_structured_output(MealPlanResponse)
             .ainvoke(
                 [
-                    SystemMessage(
-                        content=MEAL_PLAN_PROMPT,
-                        additional_kwargs={"cache_control": {"type": "ephemeral"}},
-                    ),
-                    HumanMessage(content=human_message),
+                    system_message,
+                    human_message,
                 ]
             )
         )
