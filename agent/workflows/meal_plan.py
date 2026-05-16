@@ -1,24 +1,30 @@
 from collections import defaultdict
 import json
-from anthropic import AsyncAnthropic
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage, SystemMessage
+from pydantic import BaseModel, Field
 
 from agent.prompts import MEAL_PLAN_PROMPT
-from agent.tools import CREATE_MEAL_PLAN_TOOL
 from agent.workflows import Workflow
 from models import PendingAction, Recipe, ShoppingItem, WeeklyPlan
 from storage import transaction, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 import utils.date
 
 
+class MealPlanResponse(BaseModel):
+    recipe_ids: list[int] = Field(description="List of Recipe IDs for a given week")
+    notes: str = Field(description="Rationale and any caveats for choosing the recipes")
+
+
 class MealPlanWorkflow(Workflow):
     def __init__(
         self,
-        client: AsyncAnthropic,
+        model: BaseChatModel,
         recipe_store: RecipeStore,
         weekly_plan_store: WeeklyPlanStore,
         shopping_item_store: ShoppingItemStore,
     ):
-        self.client = client
+        self.model = model
         self.recipe_store = recipe_store
         self.weekly_plan_store = weekly_plan_store
         self.shopping_item_store = shopping_item_store
@@ -44,44 +50,36 @@ class MealPlanWorkflow(Workflow):
         recipe_bank_short = {
             rid: {"name": r.name, "tags": r.tags} for rid, r in self.recipe_bank.items()
         }
-        message = (
+        human_message = (
             f"Recipe bank:\n{json.dumps(recipe_bank_short)}\n\n"
             f"Previous recipe_ids: {json.dumps(self.prev_recipe_ids)}"
         )
-        resp = await self.client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=512,
-            system=[
-                {
-                    "type": "text",
-                    "text": MEAL_PLAN_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            tools=[CREATE_MEAL_PLAN_TOOL],
-            tool_choice={"type": "tool", "name": "create_meal_plan"},
-            messages=[
-                {
-                    "role": "user",
-                    "content": message,
-                }
-            ],
+        response: MealPlanResponse = (
+            await self.model.bind(max_tokens=512)
+            .with_structured_output(MealPlanResponse)
+            .ainvoke(
+                [
+                    SystemMessage(
+                        content=MEAL_PLAN_PROMPT,
+                        additional_kwargs={"cache_control": {"type": "ephemeral"}},
+                    ),
+                    HumanMessage(content=human_message),
+                ]
+            )
         )
-
-        # Parse outputs
-        recipe_ids = resp.content[0].input["recipe_ids"]
-        notes = resp.content[0].input["notes"]
-        print("Picked recipe_ids:", recipe_ids)
+        print("Picked recipe_ids:", response.recipe_ids)
 
         # Raise exception if picked a non-existent recipe_id
         missing_recipe_ids = [
-            rid for rid in recipe_ids if rid is not None and rid not in self.recipe_bank
+            rid
+            for rid in response.recipe_ids
+            if rid is not None and rid not in self.recipe_bank
         ]
         if missing_recipe_ids:
             raise ValueError(f"Could not find recipe_ids: {missing_recipe_ids}")
 
-        self.new_recipe_ids = recipe_ids
-        self.llm_notes = notes
+        self.new_recipe_ids = response.recipe_ids
+        self.llm_notes = response.notes
 
     async def _persist_weekly_plan(self) -> None:
         async with transaction(self.weekly_plan_store.db):
