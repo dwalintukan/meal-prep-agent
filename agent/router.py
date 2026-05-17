@@ -11,7 +11,7 @@ from utils import extract_url
 async def route(
     message: str,
     model_classifier: ChatAnthropic,
-    model_primary: ChatAnthropic,
+    model_agent: ChatAnthropic,
     recipe_store: RecipeStore,
     weekly_plan_store: WeeklyPlanStore,
     shopping_item_store: ShoppingItemStore,
@@ -20,12 +20,12 @@ async def route(
     match classified_intent.intent:
         case Intent.PLAN:
             return await MealPlanWorkflow(
-                model_primary, recipe_store, weekly_plan_store, shopping_item_store
+                model_agent, recipe_store, weekly_plan_store, shopping_item_store
             ).run()
 
         case Intent.PARSE_RECIPE:
             url = extract_url(message)
-            return await ParseRecipeWorkflow(model_primary, url).run()
+            return await ParseRecipeWorkflow(model_agent, url).run()
 
         case Intent.CHAT:
             return await ChatWorkflow().run()

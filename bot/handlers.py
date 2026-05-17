@@ -23,7 +23,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     bot_reply, pending_action = await route(
         user_message,
         context.bot_data["model_classifier"],
-        context.bot_data["model_primary"],
+        context.bot_data["model_agent"],
         context.bot_data["recipe_store"],
         context.bot_data["weekly_plan_store"],
         context.bot_data["shopping_item_store"],
