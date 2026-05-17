@@ -74,20 +74,20 @@ class WeeklyPlanStore:
         return await self._parse_weekly_plan(row)
 
     async def update(self, plan: WeeklyPlan) -> None:
-        await self.db.execute(
-            "UPDATE weekly_plans SET timestamp=?, recipe_ids=?, created_at=? WHERE id=?",
-            (
-                plan.timestamp.isoformat(),
-                json.dumps(plan.recipe_ids),
-                plan.created_at.isoformat(),
-                plan.id,
-            ),
-        )
-        await self.db.commit()
+        async with transaction(self.db):
+            await self.db.execute(
+                "UPDATE weekly_plans SET timestamp=?, recipe_ids=?, created_at=? WHERE id=?",
+                (
+                    plan.timestamp.isoformat(),
+                    json.dumps(plan.recipe_ids),
+                    plan.created_at.isoformat(),
+                    plan.id,
+                ),
+            )
 
     async def delete(self, id: int) -> None:
-        await self.db.execute("DELETE FROM weekly_plans WHERE id = ?", (id,))
-        await self.db.commit()
+        async with transaction(self.db):
+            await self.db.execute("DELETE FROM weekly_plans WHERE id = ?", (id,))
 
     async def _parse_weekly_plan(self, row) -> WeeklyPlan:
         async with self.db.execute(
