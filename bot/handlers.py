@@ -22,7 +22,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Call LLM
     bot_reply, pending_action = await route(
         user_message,
-        context.bot_data["anthropic_client"],
+        context.bot_data["model_classifier"],
+        context.bot_data["model_agent"],
         context.bot_data["recipe_store"],
         context.bot_data["weekly_plan_store"],
         context.bot_data["shopping_item_store"],
