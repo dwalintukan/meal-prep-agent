@@ -18,7 +18,7 @@ class IngredientStore:
 
     async def create(self, ingredient: Ingredient, recipe_id: int) -> None:
         await self.db.execute(
-            "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?)",
             (
                 recipe_id,
                 ingredient.name,
@@ -35,17 +35,12 @@ class IngredientStore:
             row = await cur.fetchone()
         if row is None:
             return None
-        return Ingredient(
-            id=row["id"], name=row["name"], unit=row["unit"], amount=row["amount"]
-        )
+        return self._parse_ingredient(row)
 
     async def get_all(self) -> list[Ingredient]:
         async with self.db.execute("SELECT * FROM ingredients") as cur:
             rows = await cur.fetchall()
-        return [
-            Ingredient(id=r["id"], name=r["name"], unit=r["unit"], amount=r["amount"])
-            for r in rows
-        ]
+        return [self._parse_ingredient(r) for r in rows]
 
     async def update(self, ingredient: Ingredient) -> None:
         await self.db.execute(
@@ -57,3 +52,8 @@ class IngredientStore:
     async def delete(self, id: int) -> None:
         await self.db.execute("DELETE FROM ingredients WHERE id = ?", (id,))
         await self.db.commit()
+
+    def _parse_ingredient(self, row: dict) -> Ingredient:
+        return Ingredient(
+            id=row["id"], name=row["name"], unit=row["unit"], amount=row["amount"]
+        )
