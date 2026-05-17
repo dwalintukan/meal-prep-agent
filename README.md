@@ -36,7 +36,6 @@ Create an `.env` file at root and fill in:
 - `VECTOR_DB_PATH` (default: `.chroma`)
 - `VOYAGE_API_KEY`
 
-
 ## Architecture
 
 A Telegram bot that uses Claude AI for meal planning. Messages are intent-classified, then routed to a workflow that calls Claude to select recipes or parse new ones.

@@ -2,7 +2,6 @@ import os
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from telegram.ext import Application, MessageHandler, filters
-import chromadb
 from langchain_chroma import Chroma
 from langchain_voyageai import VoyageAIEmbeddings
 
