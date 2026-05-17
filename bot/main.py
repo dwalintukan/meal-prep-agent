@@ -3,6 +3,7 @@ from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from telegram.ext import Application, MessageHandler, filters
 import chromadb
+from langchain_chroma import Chroma
 from langchain_voyageai import VoyageAIEmbeddings
 
 from storage import init_db, close_db, RecipeStore, WeeklyPlanStore, ShoppingItemStore
@@ -25,18 +26,22 @@ async def post_init(application: Application) -> None:
     application.bot_data["shopping_item_store"] = ShoppingItemStore(db)
     print("Initialized database")
 
-    # Init Vector DB
-    chroma_client = chromadb.PersistentClient(os.getenv("VECTOR_DB_PATH", ".chroma"))
-    application.bot_data["recipe_collection"] = chroma_client.get_or_create_collection(
-        "recipes"
-    )
-    print("Initialized vector database")
-
     # Init Embeddings
-    application.bot_data["embeddings"] = VoyageAIEmbeddings(
-        voyage_api_key=os.getenv("VOYAGE_API_KEY", model="voyage-4")
+    embeddings = VoyageAIEmbeddings(
+        voyage_api_key=os.getenv("VOYAGE_API_KEY"),
+        model="voyage-4",
     )
+    application.bot_data["embeddings"] = embeddings
     print("Initialized embeddings")
+
+    # Init Vector DB
+    vector_store = Chroma(
+        collection_name="recipes",
+        embedding_function=embeddings,
+        persist_directory=os.getenv("VECTOR_DB_PATH", ".chroma"),
+    )
+    application.bot_data["vector_store"] = vector_store
+    print("Initialized vector database")
 
     print("Meal Prep Agent is ready for your command 👨‍🍳")
 
