@@ -68,39 +68,40 @@ class RecipeStore:
         return [await self._load_recipe(dict(row)) for row in rows]
 
     async def update(self, recipe: Recipe) -> None:
-        await self.db.execute(
-            "UPDATE recipes SET name=?, instructions=?, servings=?, prep_minutes=?, "
-            "cook_minutes=?, tags=?, created_at=? WHERE id=?",
-            (
-                recipe.name,
-                json.dumps(recipe.instructions),
-                recipe.servings,
-                recipe.prep_minutes,
-                recipe.cook_minutes,
-                json.dumps(recipe.tags),
-                recipe.created_at.isoformat(),
-                recipe.id,
-            ),
-        )
-        await self.db.execute(
-            "DELETE FROM ingredients WHERE recipe_id = ?", (recipe.id,)
-        )
-        for ingredient in recipe.ingredients:
+        async with transaction(self.db):
             await self.db.execute(
-                "INSERT INTO ingredients (id, recipe_id, name, unit, amount) VALUES (?, ?, ?, ?, ?)",
+                "UPDATE recipes SET name=?, instructions=?, servings=?, prep_minutes=?, "
+                "cook_minutes=?, tags=?, created_at=? WHERE id=?",
                 (
-                    ingredient.id,
+                    recipe.name,
+                    json.dumps(recipe.instructions),
+                    recipe.servings,
+                    recipe.prep_minutes,
+                    recipe.cook_minutes,
+                    json.dumps(recipe.tags),
+                    recipe.created_at.isoformat(),
                     recipe.id,
-                    ingredient.name,
-                    ingredient.unit,
-                    ingredient.amount,
                 ),
             )
-        await self.db.commit()
+            await self.db.execute(
+                "DELETE FROM ingredients WHERE recipe_id = ?", (recipe.id,)
+            )
+            for ingredient in recipe.ingredients:
+                await self.db.execute(
+                    "INSERT INTO ingredients (id, recipe_id, name, unit, amount) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (
+                        ingredient.id,
+                        recipe.id,
+                        ingredient.name,
+                        ingredient.unit,
+                        ingredient.amount,
+                    ),
+                )
 
     async def delete(self, id: int) -> None:
-        await self.db.execute("DELETE FROM recipes WHERE id = ?", (id,))
-        await self.db.commit()
+        async with transaction(self.db):
+            await self.db.execute("DELETE FROM recipes WHERE id = ?", (id,))
 
     async def _load_recipe(self, row: dict) -> Recipe:
         async with self.db.execute(
