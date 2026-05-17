@@ -4,7 +4,6 @@
       "Skill(claude-api)",
       "WebSearch",
       "Bash(uv run *)",
-      "Bash(uv add *)",
       "Bash(python *)",
       "Bash(.venv/bin/pytest *)"
     ]
