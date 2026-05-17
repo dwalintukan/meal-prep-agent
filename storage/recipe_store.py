@@ -4,6 +4,7 @@ from typing import Protocol
 
 import aiosqlite
 from models import Ingredient, Recipe
+from storage.db import transaction
 
 
 class IRecipeStore(Protocol):
@@ -19,36 +20,40 @@ class RecipeStore:
         self.db = db
 
     async def create(self, recipe: Recipe) -> int:
-        async with self.db.execute("BEGIN"):
-            pass
-        cursor = await self.db.execute(
-            "INSERT INTO recipes (name, instructions, servings, prep_minutes, cook_minutes, tags, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                recipe.name,
-                json.dumps(recipe.instructions),
-                recipe.servings,
-                recipe.prep_minutes,
-                recipe.cook_minutes,
-                json.dumps(recipe.tags),
-                recipe.created_at.isoformat(),
-            ),
-        )
-        recipe_id = cursor.lastrowid
-        for ingredient in recipe.ingredients:
-            await self.db.execute(
-                "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?)",
+        async with transaction(self.db):
+            # Insert Recipe
+            cursor = await self.db.execute(
+                "INSERT INTO recipes (name, instructions, servings, prep_minutes, cook_minutes, tags, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
-                    recipe_id,
-                    ingredient.name,
-                    ingredient.unit,
-                    ingredient.amount,
+                    recipe.name,
+                    json.dumps(recipe.instructions),
+                    recipe.servings,
+                    recipe.prep_minutes,
+                    recipe.cook_minutes,
+                    json.dumps(recipe.tags),
+                    recipe.created_at.isoformat(),
                 ),
             )
-        await self.db.commit()
-        print(f"Recipe created: {recipe.name}")
+            recipe_id = cursor.lastrowid
+            if recipe_id is None:
+                raise RuntimeError("INSERT into recipes returned no rowid")
 
-        return recipe_id
+            # Insert Ingredients
+            for ingredient in recipe.ingredients:
+                await self.db.execute(
+                    "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?)",
+                    (
+                        recipe_id,
+                        ingredient.name,
+                        ingredient.unit,
+                        ingredient.amount,
+                    ),
+                )
+
+            print(f"Recipe created: {recipe.name}")
+
+            return recipe_id
 
     async def get(self, id: int) -> Recipe | None:
         async with self.db.execute("SELECT * FROM recipes WHERE id = ?", (id,)) as cur:
