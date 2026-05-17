@@ -41,11 +41,6 @@ class ShoppingItemStore:
             return None
         return self._parse_shopping_item(row)
 
-    async def get_all(self) -> list[ShoppingItem]:
-        async with self.db.execute("SELECT * FROM shopping_items") as cur:
-            rows = await cur.fetchall()
-        return [self._parse_shopping_item(r) for r in rows]
-
     async def get_by_weekly_plan(self, weekly_plan_id: int) -> list[ShoppingItem]:
         async with self.db.execute(
             "SELECT * FROM shopping_items WHERE weekly_plan_id = ?", (weekly_plan_id,)
@@ -54,15 +49,17 @@ class ShoppingItemStore:
         return [self._parse_shopping_item(r) for r in rows]
 
     async def update(self, id: int, item: ShoppingItem) -> None:
-        await self.db.execute(
-            "UPDATE shopping_items SET weekly_plan_id=?, ingredient_name=?, unit=?, amount=? WHERE id=?",
-            (item.weekly_plan_id, item.ingredient_name, item.unit, item.amount, id),
-        )
-        await self.db.commit()
+        async with transaction(self.db):
+            await self.db.execute(
+                "UPDATE shopping_items "
+                "SET weekly_plan_id=?, ingredient_name=?, unit=?, amount=? "
+                "WHERE id=?",
+                (item.weekly_plan_id, item.ingredient_name, item.unit, item.amount, id),
+            )
 
     async def delete(self, id: int) -> None:
-        await self.db.execute("DELETE FROM shopping_items WHERE id = ?", (id,))
-        await self.db.commit()
+        async with transaction(self.db):
+            await self.db.execute("DELETE FROM shopping_items WHERE id = ?", (id,))
 
     @staticmethod
     def _parse_shopping_item(row) -> ShoppingItem:
