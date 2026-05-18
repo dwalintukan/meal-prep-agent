@@ -108,6 +108,10 @@ class RecipeStore:
                 )
 
     async def update_embedded(self, recipe_ids: list[int]) -> None:
+        # Return early if no recipe ids to avoid SQL error
+        if not recipe_ids:
+            return
+
         placeholders = ",".join("?" * len(recipe_ids))
         async with transaction(self.db):
             await self.db.execute(
@@ -138,4 +142,5 @@ class RecipeStore:
             cook_minutes=row["cook_minutes"],
             tags=json.loads(row["tags"]),
             created_at=datetime.fromisoformat(row["created_at"]),
+            embedded=row["embedded"],
         )

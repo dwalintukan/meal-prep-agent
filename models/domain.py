@@ -19,6 +19,7 @@ class Recipe(BaseModel):
     cook_minutes: int
     tags: list[str]
     created_at: datetime
+    embedded: bool
 
 
 class ShoppingItem(BaseModel):
