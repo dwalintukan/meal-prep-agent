@@ -32,7 +32,9 @@ class IngredientStore:
             if ingredient_id is None:
                 raise RuntimeError("INSERT into ingredients returned no rowid")
 
-            print(f"Ingredient created: {ingredient.name}")
+            print(
+                f"Ingredient created: recipe_id={recipe_id} id={ingredient_id} name={ingredient.name}"
+            )
 
             return ingredient_id
 

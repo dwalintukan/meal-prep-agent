@@ -53,7 +53,7 @@ class RecipeStore:
                     ),
                 )
 
-            print(f"Recipe created: {recipe.name}")
+            print(f"Recipe created: id={recipe_id} name={recipe.name}")
 
             return recipe_id
 
