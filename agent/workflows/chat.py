@@ -2,6 +2,11 @@ from agent.workflows import Workflow
 from models import PendingAction
 
 
+CHAT_PROMPT = """
+You are a friendly Meal Prep Assistant. Format for Telegram (`*bold*`, bullet points, ≤4096 chars).
+"""
+
+
 class ChatWorkflow(Workflow):
     async def run(self) -> tuple[str, PendingAction | None]:
         return (

@@ -6,7 +6,7 @@ from storage.db import transaction
 
 
 class IIngredientStore(Protocol):
-    async def create(self, ingredient: Ingredient, recipe_id: int) -> None: ...
+    async def create(self, ingredient: Ingredient, recipe_id: int) -> int: ...
     async def get(self, id: int) -> Ingredient | None: ...
     async def get_all(self) -> list[Ingredient]: ...
     async def update(self, ingredient: Ingredient) -> None: ...
@@ -17,9 +17,9 @@ class IngredientStore:
     def __init__(self, db: aiosqlite.Connection):
         self.db = db
 
-    async def create(self, ingredient: Ingredient, recipe_id: int) -> None:
+    async def create(self, ingredient: Ingredient, recipe_id: int) -> int:
         async with transaction(self.db):
-            await self.db.execute(
+            async with self.db.execute(
                 "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?)",
                 (
                     recipe_id,
@@ -27,7 +27,16 @@ class IngredientStore:
                     ingredient.unit,
                     ingredient.amount,
                 ),
+            ) as cur:
+                ingredient_id = cur.lastrowid
+            if ingredient_id is None:
+                raise RuntimeError("INSERT into ingredients returned no rowid")
+
+            print(
+                f"Ingredient created: recipe_id={recipe_id} id={ingredient_id} name={ingredient.name}"
             )
+
+            return ingredient_id
 
     async def get(self, id: int) -> Ingredient | None:
         async with self.db.execute(

@@ -6,9 +6,8 @@ from storage.db import transaction
 
 
 class IShoppingItemStore(Protocol):
-    async def create(self, item: ShoppingItem) -> None: ...
+    async def create(self, item: ShoppingItem) -> int: ...
     async def get(self, id: int) -> ShoppingItem | None: ...
-    async def get_all(self) -> list[ShoppingItem]: ...
     async def get_by_weekly_plan(self, weekly_plan_id: int) -> list[ShoppingItem]: ...
     async def update(self, id: int, item: ShoppingItem) -> None: ...
     async def delete(self, id: int) -> None: ...
@@ -30,7 +29,15 @@ class ShoppingItemStore:
                     item.amount,
                 ),
             ) as cur:
-                return cur.lastrowid
+                shopping_item_id = cur.lastrowid
+            if shopping_item_id is None:
+                raise RuntimeError("INSERT into shopping_items returned no rowid")
+
+            print(
+                f"ShoppingItem created: weekly_plan_id={item.weekly_plan_id} ingredient_name={item.ingredient_name}"
+            )
+
+            return shopping_item_id
 
     async def get(self, id: int) -> ShoppingItem | None:
         async with self.db.execute(
