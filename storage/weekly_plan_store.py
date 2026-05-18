@@ -9,8 +9,9 @@ import utils.date
 
 
 class IWeeklyPlanStore(Protocol):
-    async def create(self, plan: WeeklyPlan) -> None: ...
+    async def create(self, plan: WeeklyPlan) -> int: ...
     async def get(self, id: int) -> WeeklyPlan | None: ...
+    async def get_last_weekly_plan_recipe_ids(self) -> WeeklyPlan | None: ...
     async def update(self, plan: WeeklyPlan) -> None: ...
     async def delete(self, id: int) -> None: ...
 
@@ -47,7 +48,7 @@ class WeeklyPlanStore:
                     ),
                 )
 
-            print(f"WeeklyPlan created for {plan.timestamp.isoformat()}")
+            print(f"WeeklyPlan created: timestamp={plan.timestamp.isoformat()}")
 
             return weekly_plan_id
 
