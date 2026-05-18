@@ -55,13 +55,13 @@ class MealPlanWorkflow(Workflow):
         self.new_weekly_plan: WeeklyPlan | None = None
         self.new_shopping_items: list[ShoppingItem] = []
 
-    async def _build_recipe_bank(self) -> None:
+    async def _fetch_prev_recipe_ids(self) -> None:
         prev_weekly_plan = (
             await self.weekly_plan_store.get_last_weekly_plan_recipe_ids()
         )
         self.prev_recipe_ids = prev_weekly_plan.recipe_ids if prev_weekly_plan else []
 
-    async def _fetch_recipe_bank(self) -> None:
+    async def _build_recipe_bank(self) -> None:
         # TODO: inject prompt from user
         # Fetch short list of recipes from vector store
         docs = await self.vector_store.asimilarity_search(
@@ -168,8 +168,8 @@ class MealPlanWorkflow(Workflow):
         )
 
     async def run(self) -> tuple[str, PendingAction | None]:
+        await self._fetch_prev_recipe_ids()
         await self._build_recipe_bank()
-        await self._fetch_recipe_bank()
         await self._get_recommended_recipes()
         await self._persist_weekly_plan()
         return self._format_message(), None

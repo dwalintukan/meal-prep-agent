@@ -71,7 +71,7 @@ class RecipeStore:
         ) as cur:
             rows = await cur.fetchall()
         # TODO: N+1 query, ok for now, refactor later
-        return [await self._load_recipe(r) for r in rows]
+        return [await self._load_recipe(dict(r)) for r in rows]
 
     async def get_all_unembedded(self) -> list[Recipe]:
         async with self.db.execute("SELECT * FROM recipes WHERE embedded = 0") as cur:
