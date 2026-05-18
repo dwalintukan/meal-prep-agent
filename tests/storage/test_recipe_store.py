@@ -35,22 +35,19 @@ async def test_recipe_get_nonexistent_returns_none(db):
 
 
 # ---------------------------------------------------------------------------
-# get_all
+# get_by_ids
 # ---------------------------------------------------------------------------
 
 
-async def test_recipe_get_all(db):
+async def test_recipe_get_by_ids(db):
     store = RecipeStore(db)
-    await store.create(make_recipe(name="Pasta"))
-    await store.create(make_recipe(name="Salad"))
-    results = await store.get_all()
+    id1 = await store.create(make_recipe(name="Pasta"))
+    id2 = await store.create(make_recipe(name="Salad"))
+    id3 = await store.create(make_recipe(name="Cake"))
+    results = await store.get_by_ids([id1, id3])
     assert len(results) == 2
     names = {r.name for r in results}
-    assert names == {"Pasta", "Salad"}
-
-
-async def test_recipe_get_all_empty(db):
-    assert await RecipeStore(db).get_all() == []
+    assert names == {"Pasta", "Cake"}
 
 
 # ---------------------------------------------------------------------------
