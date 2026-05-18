@@ -67,9 +67,9 @@ class RecipeStore:
     async def get_by_ids(self, ids: list[int]) -> list[Recipe]:
         placeholders = ", ".join("?" * len(ids))
         async with self.db.execute(
-            f"SELECT * FROM recipes WHERE id IN ({placeholders})"
+            f"SELECT * FROM recipes WHERE id IN ({placeholders})", ids
         ) as cur:
-            rows = await cur.fetchmany()
+            rows = await cur.fetchall()
         # TODO: N+1 query, ok for now, refactor later
         return [await self._load_recipe(r) for r in rows]
 
