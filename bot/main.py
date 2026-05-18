@@ -5,6 +5,7 @@ from langchain_core.vectorstores import VectorStore
 from telegram.ext import Application, MessageHandler, filters
 from langchain_chroma import Chroma
 from langchain_voyageai import VoyageAIEmbeddings
+import chromadb
 
 from storage import (
     init_db,
@@ -43,10 +44,11 @@ async def post_init(application: Application) -> None:
     print("Initialized embeddings")
 
     # Init Vector DB
+    chroma_client = chromadb.HttpClient(
+        host=os.getenv("CHROMA_HOST"), port=int(os.getenv("CHROMA_PORT"))
+    )
     vector_store = Chroma(
-        collection_name="recipes",
-        embedding_function=embeddings,
-        persist_directory=os.getenv("VECTOR_DB_PATH", ".chroma"),
+        collection_name="recipes", embedding_function=embeddings, client=chroma_client
     )
     application.bot_data["vector_store"] = vector_store
     print("Initialized vector database")

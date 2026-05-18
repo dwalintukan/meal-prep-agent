@@ -31,9 +31,10 @@ uv run ruff format .
 Create an `.env` file at root and fill in:
 
 - `ANTHROPIC_API_KEY`
-- `TELEGRAM_BOT_TOKEN`
+- `CHROMA_HOST`
+- `CHROMA_PORT`
 - `DB_PATH` (default: `.data/meal_prep.db`)
-- `VECTOR_DB_PATH` (default: `.chroma`)
+- `TELEGRAM_BOT_TOKEN`
 - `VOYAGE_API_KEY`
 
 ## Migrations
