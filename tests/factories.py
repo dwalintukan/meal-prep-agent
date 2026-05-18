@@ -14,6 +14,7 @@ def make_recipe(
     servings: int = 2,
     prep_minutes: int = 5,
     cook_minutes: int = 10,
+    embedded: bool = True,
 ) -> Recipe:
     return Recipe(
         name=name,
@@ -24,6 +25,7 @@ def make_recipe(
         cook_minutes=cook_minutes,
         tags=tags,
         created_at=datetime.today(),
+        embedded=embedded,
     )
 
 

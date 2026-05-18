@@ -11,6 +11,7 @@ class IRecipeStore(Protocol):
     async def create(self, recipe: Recipe) -> None: ...
     async def get(self, id: int) -> Recipe | None: ...
     async def get_all(self) -> list[Recipe]: ...
+    async def get_all_unembedded(self) -> list[Recipe]: ...
     async def update(self, recipe: Recipe) -> None: ...
     async def delete(self, id: int) -> None: ...
 
@@ -65,6 +66,13 @@ class RecipeStore:
     async def get_all(self) -> list[Recipe]:
         async with self.db.execute("SELECT * FROM recipes") as cur:
             rows = await cur.fetchall()
+        # TODO: N+1 query, ok for now, refactor later
+        return [await self._load_recipe(dict(row)) for row in rows]
+
+    async def get_all_unembedded(self) -> list[Recipe]:
+        async with self.db.execute("SELECT * FROM recipes WHERE embedded = 0") as cur:
+            rows = await cur.fetchall()
+        # TODO: N+1 query, ok for now, refactor later
         return [await self._load_recipe(dict(row)) for row in rows]
 
     async def update(self, recipe: Recipe) -> None:
@@ -99,6 +107,18 @@ class RecipeStore:
                     ),
                 )
 
+    async def update_embedded(self, recipe_ids: list[int]) -> None:
+        # Return early if no recipe ids to avoid SQL error
+        if not recipe_ids:
+            return
+
+        placeholders = ",".join("?" * len(recipe_ids))
+        async with transaction(self.db):
+            await self.db.execute(
+                f"UPDATE recipes SET embedded=1 WHERE id IN ({placeholders})",
+                recipe_ids,
+            )
+
     async def delete(self, id: int) -> None:
         async with transaction(self.db):
             await self.db.execute("DELETE FROM recipes WHERE id = ?", (id,))
@@ -122,4 +142,5 @@ class RecipeStore:
             cook_minutes=row["cook_minutes"],
             tags=json.loads(row["tags"]),
             created_at=datetime.fromisoformat(row["created_at"]),
+            embedded=row["embedded"],
         )

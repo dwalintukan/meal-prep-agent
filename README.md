@@ -31,11 +31,17 @@ uv run ruff format .
 Create an `.env` file at root and fill in:
 
 - `ANTHROPIC_API_KEY`
-- `TELEGRAM_BOT_TOKEN`
+- `CHROMA_HOST`
+- `CHROMA_PORT`
 - `DB_PATH` (default: `.data/meal_prep.db`)
-- `VECTOR_DB_PATH` (default: `.chroma`)
+- `TELEGRAM_BOT_TOKEN`
 - `VOYAGE_API_KEY`
 
+## Migrations
+
+Meal Prep Agent uses `SQLite` with a local database file paired with [yoyo](https://ollycope.com/software/yoyo/latest/) to handle migrations.
+
+To add new migrations, create a new SQL file `NNN-migration-name.sql` in `migrations/`. The migration will run synchronously when you run the bot.
 
 ## Architecture
 

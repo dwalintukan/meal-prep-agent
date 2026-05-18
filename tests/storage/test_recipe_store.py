@@ -54,6 +54,32 @@ async def test_recipe_get_all_empty(db):
 
 
 # ---------------------------------------------------------------------------
+# get_all_unembedded
+# ---------------------------------------------------------------------------
+
+
+async def test_get_all_unembedded_empty_db(db):
+    assert await RecipeStore(db).get_all_unembedded() == []
+
+
+async def test_get_all_unembedded_returns_new_recipes(db):
+    store = RecipeStore(db)
+    await store.create(make_recipe())
+    result = await store.get_all_unembedded()
+    assert len(result) == 1
+
+
+async def test_get_all_unembedded_excludes_embedded_recipes(db):
+    store = RecipeStore(db)
+    id1 = await store.create(make_recipe())
+    id2 = await store.create(make_recipe())
+    await store.update_embedded([id1])
+    unembedded = await store.get_all_unembedded()
+    assert len(unembedded) == 1
+    assert unembedded[0].id == id2
+
+
+# ---------------------------------------------------------------------------
 # update
 # ---------------------------------------------------------------------------
 
@@ -88,6 +114,41 @@ async def test_recipe_update_clears_ingredients(db):
     await store.update(recipe)
     result = await store.get(recipe_id)
     assert result.ingredients == []
+
+
+# ---------------------------------------------------------------------------
+# update_embedded
+# ---------------------------------------------------------------------------
+
+
+async def test_update_embedded_single(db):
+    store = RecipeStore(db)
+    recipe_id = await store.create(make_recipe())
+    await store.update_embedded([recipe_id])
+    assert await store.get_all_unembedded() == []
+
+
+async def test_update_embedded_multiple(db):
+    store = RecipeStore(db)
+    id1 = await store.create(make_recipe(name="A"))
+    id2 = await store.create(make_recipe(name="B"))
+    id3 = await store.create(make_recipe(name="C"))
+
+    await store.update_embedded([id1, id2, id3])
+    r1 = await store.get(id1)
+    assert r1.embedded
+    r2 = await store.get(id2)
+    assert r2.embedded
+    r3 = await store.get(id3)
+    assert r3.embedded
+    assert await store.get_all_unembedded() == []
+
+
+async def test_update_embedded_empty_list_is_noop(db):
+    store = RecipeStore(db)
+    await store.create(make_recipe())
+    await store.update_embedded([])
+    assert len(await store.get_all_unembedded()) == 1
 
 
 # ---------------------------------------------------------------------------

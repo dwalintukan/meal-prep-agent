@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 from agent import route
 from agent.workflows import PendingAction
 from models import Recipe
-from storage import RecipeStore
+from storage import RecipeStore, embed_recipe
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -59,9 +59,11 @@ async def _handle_pending_action(
                     user_message, context, pending_action
                 )
                 await _send_reply(update, bot_reply)
+                return True
+
             case _:
                 print(f"Unhandled PendingAction: {pending_action.type}")
-        return True
+                return False
 
     return False
 
@@ -71,12 +73,24 @@ async def _handle_confirm_recipe_message(
 ) -> str:
     user_message = user_message.strip().lower()
     if user_message in ("yes", "y"):
+        # Save Recipe to DB
         recipe_store: RecipeStore = context.bot_data["recipe_store"]
+        # Missing id because it hasn't be inserted to the DB
         recipe: Recipe = pending_action.data["recipe"]
-        await recipe_store.create(recipe)
+        recipe_id = await recipe_store.create(recipe)
+        recipe.id = recipe_id
+
+        # Embed Recipe
+        vector_store = context.bot_data["vector_store"]
+        try:
+            await embed_recipe(vector_store, recipe)
+            await recipe_store.update_embedded([recipe_id])
+        except Exception as e:
+            print(f"Warning: embedding failed for recipe_id={recipe_id}: {e}")
+
         return f"I've saved your {recipe.name} Recipe for future meal plans."
-    else:
-        return "Cancelled saving your recipe."
+
+    return "Cancelled saving your recipe."
 
 
 def _split_message(text: str, limit: int = 4096) -> list[str]:

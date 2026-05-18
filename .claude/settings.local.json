@@ -5,7 +5,8 @@
       "WebSearch",
       "Bash(uv run *)",
       "Bash(python *)",
-      "Bash(.venv/bin/pytest *)"
+      "Bash(.venv/bin/pytest *)",
+      "Bash(find *)"
     ]
   }
 }
