@@ -4,9 +4,14 @@ import pytest
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 
+from models import Ingredient
 from storage.recipe_store import RecipeStore
 from storage.vector_store import _build_recipe_document, embed_recipe, reconcile_recipes
 from tests.factories import make_recipe
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -30,14 +35,17 @@ def test_build_recipe_document_content():
     recipe = make_recipe(
         name="Chicken Rice",
         tags=["easy", "healthy"],
+        ingredients=[
+            Ingredient(name="Chicken", unit="g", amount=450),
+            Ingredient(name="Rice", unit="cup", amount=2),
+        ],
         prep_minutes=10,
         cook_minutes=20,
     )
     doc = _build_recipe_document(recipe)
     assert "Chicken Rice" in doc.page_content
-    assert "easy" in doc.page_content
-    assert "healthy" in doc.page_content
-    assert "Pasta" in doc.page_content  # default ingredient from factory
+    assert "Tags: easy, healthy" in doc.page_content
+    assert "Ingredients: Chicken, Rice" in doc.page_content
     assert "Ready in 30 minutes" in doc.page_content
 
 

@@ -71,19 +71,12 @@ async def test_get_all_unembedded_returns_new_recipes(db):
 
 async def test_get_all_unembedded_excludes_embedded_recipes(db):
     store = RecipeStore(db)
-    recipe_id = await store.create(make_recipe())
-    await store.update_embedded([recipe_id])
-    assert await store.get_all_unembedded() == []
-
-
-async def test_get_all_unembedded_mixed(db):
-    store = RecipeStore(db)
-    embedded_id = await store.create(make_recipe(name="Embedded"))
-    await store.create(make_recipe(name="Not Embedded"))
-    await store.update_embedded([embedded_id])
-    result = await store.get_all_unembedded()
-    assert len(result) == 1
-    assert result[0].name == "Not Embedded"
+    id1 = await store.create(make_recipe())
+    id2 = await store.create(make_recipe())
+    await store.update_embedded([id1])
+    unembedded = await store.get_all_unembedded()
+    assert len(unembedded) == 1
+    assert unembedded[0].id == id2
 
 
 # ---------------------------------------------------------------------------
