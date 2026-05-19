@@ -4,6 +4,7 @@ from langchain_core.vectorstores import VectorStore
 from langgraph.types import interrupt
 from langgraph.graph import StateGraph
 from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.constants import START, END
 
 from agent.classifier import Intent, classify
 from agent.state import BotState
@@ -66,7 +67,7 @@ def create_graph(
 
         # End the workflow if not confirming
         # TODO: possible to send user message back?
-        return "END"
+        return END
 
     async def save_recipe(state: BotState) -> BotState:
         # Insert Recipe to DB
@@ -91,7 +92,7 @@ def create_graph(
         return {"reply": reply}
 
     # Build graph
-    workflow = StateGraph()
+    workflow = StateGraph(BotState)
     workflow.add_node("classify_intent", classify_intent)
     workflow.add_node("create_meal_plan", create_meal_plan)
     workflow.add_node("parse_recipe", parse_recipe)
@@ -100,15 +101,15 @@ def create_graph(
     workflow.add_node("chat", chat)
 
     # Add edges
-    workflow.add_edge("START", "classify_intent")
+    workflow.add_edge(START, "classify_intent")
     workflow.add_conditional_edges("classify_intent", intent_router)
 
     workflow.add_edge("parse_recipe", "confirm_recipe")
     workflow.add_conditional_edges("confirm_recipe", confirm_recipe_router)
 
-    workflow.add_edge("create_meal_plan", "END")
-    workflow.add_edge("save_recipe", "END")
-    workflow.add_edge("chat", "END")
+    workflow.add_edge("create_meal_plan", END)
+    workflow.add_edge("save_recipe", END)
+    workflow.add_edge("chat", END)
 
     # Setup checkpointing
     with PostgresSaver.from_conn_string(os.getenv("DATABASE_URL")) as checkpointer:
