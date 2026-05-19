@@ -171,4 +171,4 @@ class MealPlanWorkflow:
         await self._build_recipe_bank()
         await self._get_recommended_recipes()
         await self._persist_weekly_plan()
-        return self._format_message(), None
+        return self._format_message()
