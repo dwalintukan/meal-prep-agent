@@ -37,11 +37,37 @@ Create an `.env` file at root. See `.env.example`.
 - `TELEGRAM_BOT_TOKEN`
 - `VOYAGE_API_KEY`
 
-## Migrations
+## Database Setup
 
-Meal Prep Agent uses `SQLite` with a local database file paired with [yoyo](https://ollycope.com/software/yoyo/latest/) to handle migrations.
+Meal Prep Agent requires a running PostgreSQL instance. The quickest way is Docker:
 
-To add new migrations, create a new SQL file `NNN-migration-name.sql` in `migrations/`. The migration will run synchronously when you run the bot.
+```bash
+docker run -d \
+  --name mealprep-postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=mealprep \
+  -p 5432:5432 \
+  postgres:16
+```
+
+Then set `DATABASE_URL` in your `.env`:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mealprep"
+```
+
+To stop and remove the container:
+
+```bash
+docker stop mealprep-postgres && docker rm mealprep-postgres
+```
+
+### Migrations
+
+Meal Prep Agent uses [yoyo](https://ollycope.com/software/yoyo/latest/) for schema migrations against Postgres. Migrations run synchronously at startup before the bot begins accepting messages. No manual step required.
+
+To add a new migration, create `migrations/NNN-migration-name.sql`. It will be applied automatically on next startup.
 
 ## Architecture
 
