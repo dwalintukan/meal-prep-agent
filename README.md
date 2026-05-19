@@ -90,6 +90,19 @@ Intent Classifier (claude-haiku-4-5)
       └→ "chat"         → ChatWorkflow (claude-sonnet-4-6) # not implemented yet
 ```
 
+## RAG (Retrieval-Augmented Generation)
+
+Meal Prep Agent uses RAG to surface relevant recipes when building a meal plan, avoiding the need to pass your entire recipe library to Claude on every request.
+
+**How it works:**
+
+1. **Embedding** — When a recipe is saved, its name, tags, ingredients, and cook time are embedded via [VoyageAI](https://www.voyageai.com/) (`voyage-4`) and stored in a [ChromaDB](https://www.trychroma.com/) collection named `recipes`.
+2. **Reconciliation** — On startup, any recipes without embeddings are backfilled so the vector store stays in sync with the database.
+3. **Retrieval** — When a meal plan is requested, a semantic search (`k=10`) is run against the vector store. The top results, combined with last week's selections for variety, form the recipe bank passed to Claude.
+4. **Selection** — Claude Sonnet picks 5 weekday dinners from that bank and returns structured output (recipe IDs + rationale).
+
+This keeps prompt size bounded and improves selection quality by giving Claude a curated, contextually relevant subset of recipes rather than an unbounded list.
+
 ## Design Decisions
 
 - **Multi-model routing** — `claude-haiku-4-5` for intent classification (fast, cheap); `claude-sonnet-4-6` for meal planning and recipe parsing (capable). Cost is optimized at the routing layer, not as an afterthought.
