@@ -145,7 +145,7 @@ class MealPlanWorkflow:
         self.new_weekly_plan = weekly_plan
         self.new_shopping_items = shopping_items
 
-    def _format_message(self) -> str:
+    def _format_message(self) -> list[str]:
         recipe_strs = []
         for idx, recipe_id in enumerate(self.new_recipe_ids):
             recipe = self.recipe_bank[recipe_id]

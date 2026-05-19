@@ -62,7 +62,7 @@ class ParseRecipeWorkflow:
             **resp.model_dump(), created_at=datetime.today(), embedded=False
         )
 
-    def _format_message(self) -> str:
+    def _format_message(self) -> list[str]:
         ingredients = []
         for i in self.recipe.ingredients:
             ingredients.append(f"- {i.name} {i.amount} {i.unit}")
@@ -73,20 +73,21 @@ class ParseRecipeWorkflow:
             instructions.append(f"{idx + 1}. {instruction}")
         instructions_concat = "\n".join(instructions)
 
-        return (
+        msgs = []
+        msgs.append(
             f"I've parsed your recipe! ✅\n\n"
             f"Name: {self.recipe.name}\n"
             f"Tags: {', '.join(self.recipe.tags)}\n"
             f"Prep Mins: {self.recipe.prep_minutes}\n"
             f"Cook Mins: {self.recipe.cook_minutes}\n"
-            f"Servings: {self.recipe.servings}\n\n"
-            f"Ingredients:\n"
-            f"{ingredients_concat}\n\n"
-            f"Instructions:\n"
-            f"{instructions_concat}\n"
+            f"Servings: {self.recipe.servings}"
         )
+        msgs.append(f"Ingredients:\n{ingredients_concat}")
+        msgs.append(f"Instructions:\n{instructions_concat}")
 
-    async def run(self) -> tuple[str, Recipe | None]:
+        return msgs
+
+    async def run(self) -> tuple[list[str], Recipe | None]:
         try:
             await self._parse_url()
         except ValidationError as e:
