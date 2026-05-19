@@ -1,8 +1,7 @@
 from typing import Protocol
-import aiosqlite
 
+import asyncpg
 from models import ShoppingItem
-from storage.db import transaction
 
 
 class IShoppingItemStore(Protocol):
@@ -14,22 +13,20 @@ class IShoppingItemStore(Protocol):
 
 
 class ShoppingItemStore:
-    def __init__(self, db: aiosqlite.Connection):
+    def __init__(self, db: asyncpg.connection.Connection):
         self.db = db
 
     async def create(self, item: ShoppingItem) -> int:
-        async with transaction(self.db):
-            async with self.db.execute(
+        async with self.db.transaction():
+            shopping_item_id = await self.db.fetchval(
                 "INSERT INTO shopping_items (weekly_plan_id, ingredient_name, unit, amount) "
-                "VALUES (?, ?, ?, ?)",
-                (
-                    item.weekly_plan_id,
-                    item.ingredient_name,
-                    item.unit,
-                    item.amount,
-                ),
-            ) as cur:
-                shopping_item_id = cur.lastrowid
+                "VALUES ($1, $2, $3, $4) "
+                "RETURNING id",
+                item.weekly_plan_id,
+                item.ingredient_name,
+                item.unit,
+                item.amount,
+            )
             if shopping_item_id is None:
                 raise RuntimeError("INSERT into shopping_items returned no rowid")
 
@@ -40,36 +37,35 @@ class ShoppingItemStore:
             return shopping_item_id
 
     async def get(self, id: int) -> ShoppingItem | None:
-        async with self.db.execute(
-            "SELECT * FROM shopping_items WHERE id = ?", (id,)
-        ) as cur:
-            row = await cur.fetchone()
+        row = await self.db.fetchrow("SELECT * FROM shopping_items WHERE id = $1", id)
         if row is None:
             return None
         return self._parse_shopping_item(row)
 
     async def get_by_weekly_plan(self, weekly_plan_id: int) -> list[ShoppingItem]:
-        async with self.db.execute(
-            "SELECT * FROM shopping_items WHERE weekly_plan_id = ?", (weekly_plan_id,)
-        ) as cur:
-            rows = await cur.fetchall()
+        rows = await self.db.fetch(
+            "SELECT * FROM shopping_items WHERE weekly_plan_id = $1", weekly_plan_id
+        )
         return [self._parse_shopping_item(r) for r in rows]
 
     async def update(self, id: int, item: ShoppingItem) -> None:
-        async with transaction(self.db):
+        async with self.db.transaction():
             await self.db.execute(
                 "UPDATE shopping_items "
-                "SET weekly_plan_id=?, ingredient_name=?, unit=?, amount=? "
-                "WHERE id=?",
-                (item.weekly_plan_id, item.ingredient_name, item.unit, item.amount, id),
+                "SET weekly_plan_id=$1, ingredient_name=$2, unit=$3, amount=$4 "
+                "WHERE id=$5",
+                item.weekly_plan_id,
+                item.ingredient_name,
+                item.unit,
+                item.amount,
+                id,
             )
 
     async def delete(self, id: int) -> None:
-        async with transaction(self.db):
-            await self.db.execute("DELETE FROM shopping_items WHERE id = ?", (id,))
+        async with self.db.transaction():
+            await self.db.execute("DELETE FROM shopping_items WHERE id = $1", id)
 
-    @staticmethod
-    def _parse_shopping_item(row) -> ShoppingItem:
+    def _parse_shopping_item(self, row) -> ShoppingItem:
         return ShoppingItem(
             id=row["id"],
             weekly_plan_id=row["weekly_plan_id"],
