@@ -266,8 +266,8 @@ Each node is an async function `(state: BotState) -> dict` returning a partial s
 
 The handler becomes thread-aware: each `chat_id` maps to a LangGraph thread.
 
-- [ ] Remove `route()` call and all workflow imports
-- [ ] Replace with graph invocation:
+- [x] Remove `route()` call and all workflow imports
+- [x] Replace with graph invocation:
   ```python
   config = {"configurable": {"thread_id": str(chat_id)}}
   result = await compiled_graph.ainvoke(
@@ -276,15 +276,15 @@ The handler becomes thread-aware: each `chat_id` maps to a LangGraph thread.
   )
   reply = result["reply"]
   ```
-- [ ] Store `compiled_graph` in `bot_data["graph"]` (initialized in `post_init`)
+- [x] Store `compiled_graph` in `bot_data["graph"]` (initialized in `post_init`)
 
 ---
 
 ### 2.7 — Update `bot/main.py`
 
-- [ ] Build and compile the graph in `post_init`, store in `bot_data["graph"]`
-- [ ] Pass stores and vector_store into graph nodes via closure or partial application
-- [ ] Remove `route()` import
+- [x] Build and compile the graph in `post_init`, store in `bot_data["graph"]`
+- [x] Pass stores and vector_store into graph nodes via closure or partial application
+- [x] Remove `route()` import
 
 ---
 

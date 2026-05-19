@@ -1,27 +1,22 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from agent import route
-
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = context._chat_id
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
-    # Classify and route to proper workflow
+    # Extract user message
     user_message = update.message.text
     print("User:", user_message)
 
-    # Call LLM
-    bot_reply, pending_action = await route(
-        user_message,
-        context.bot_data["model_classifier"],
-        context.bot_data["model_agent"],
-        context.bot_data["recipe_store"],
-        context.bot_data["weekly_plan_store"],
-        context.bot_data["shopping_item_store"],
-        context.bot_data["vector_store"],
+    # Execute graph
+    config = {"configurable": {"thread_id": chat_id}}
+    graph = context.bot_data["graph"]
+    result = await graph.ainvoke(
+        {"chat_id": chat_id, "user_message": user_message}, config=config
     )
+    bot_reply = result["reply"]
     print("Bot:", bot_reply)
 
     # Send reply
