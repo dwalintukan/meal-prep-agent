@@ -28,7 +28,7 @@ uv run ruff format .
 
 ## Environment
 
-Create an `.env` file at root. See `.env.example`.
+Create a `.env` file at root. See `.env.example`.
 
 - `ANTHROPIC_API_KEY`
 - `CHROMA_HOST`
@@ -36,6 +36,8 @@ Create an `.env` file at root. See `.env.example`.
 - `DATABASE_URL`
 - `TELEGRAM_BOT_TOKEN`
 - `VOYAGE_API_KEY`
+
+**Create a `.env.test` file at root for a separated test environment.**
 
 ## Database Setup
 
