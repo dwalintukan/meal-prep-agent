@@ -42,7 +42,7 @@ async def test_recipe_get_nonexistent_returns_none(db):
 async def test_recipe_get_by_ids(db):
     store = RecipeStore(db)
     id1 = await store.create(make_recipe(name="Pasta"))
-    id2 = await store.create(make_recipe(name="Salad"))
+    await store.create(make_recipe(name="Salad"))
     id3 = await store.create(make_recipe(name="Cake"))
     results = await store.get_by_ids([id1, id3])
     assert len(results) == 2
