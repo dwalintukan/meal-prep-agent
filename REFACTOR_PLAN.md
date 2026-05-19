@@ -185,7 +185,7 @@ Currently returns a hardcoded string with no LLM call. Add a real chat response.
 
 ### 2.1 — Dependencies
 
-- [ ] `uv add langgraph langgraph-checkpoint-sqlite`
+- [x] `uv add langgraph langgraph-checkpoint-sqlite`
 
 ---
 
@@ -193,7 +193,7 @@ Currently returns a hardcoded string with no LLM call. Add a real chat response.
 
 Define the shared state that flows through the graph.
 
-- [ ] Create `BotState(TypedDict)`:
+- [x] Create `BotState(TypedDict)`:
   ```python
   class BotState(TypedDict):
       chat_id: int
