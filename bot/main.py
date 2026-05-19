@@ -26,7 +26,7 @@ async def post_init(application: Application) -> None:
     print("Initialized Anthropic clients")
 
     # Init DB
-    db = await init_db(os.getenv("DB_PATH", ".data/meal_prep.db"))
+    db = await init_db()
     application.bot_data["db"] = db
     recipe_store = RecipeStore(db)
     application.bot_data["recipe_store"] = recipe_store
