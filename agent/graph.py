@@ -57,7 +57,9 @@ def create_graph(
         return {"reply": reply, "pending_recipe": recipe}
 
     async def confirm_recipe(state: BotState) -> BotState:
-        user_input = interrupt("Does your recipe look correct?")
+        user_input = interrupt(
+            'Does your recipe look correct?\nRespond with "yes" or "no".'
+        )
         return {"user_message": user_input}
 
     async def confirm_recipe_router(state: BotState) -> str:

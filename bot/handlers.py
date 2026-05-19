@@ -1,25 +1,35 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+from langgraph.types import Command
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = context._chat_id
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
-    # Extract user message
     user_message = update.message.text
     print("User:", user_message)
 
-    # Execute graph
     config = {"configurable": {"thread_id": chat_id}}
     graph = context.bot_data["graph"]
-    result = await graph.ainvoke(
-        {"chat_id": chat_id, "user_message": user_message}, config=config
-    )
-    bot_reply = result["reply"]
-    print("Bot:", bot_reply)
 
-    # Send reply
+    # Resume an interrupted graph (e.g. confirm_recipe) instead of restarting
+    snapshot = await graph.aget_state(config)
+    if snapshot.next:
+        result = await graph.ainvoke(Command(resume=user_message), config=config)
+    else:
+        result = await graph.ainvoke(
+            {"chat_id": chat_id, "user_message": user_message}, config=config
+        )
+    bot_reply = result.get("reply", "")
+
+    # If the graph is now paused at an interrupt, append its prompt to the reply
+    new_snapshot = await graph.aget_state(config)
+    for task in new_snapshot.tasks:
+        for intr in task.interrupts:
+            bot_reply = f"{bot_reply}\n\n{intr.value}" if bot_reply else intr.value
+
+    print("Bot:", bot_reply)
     await _send_reply(update, bot_reply)
 
 

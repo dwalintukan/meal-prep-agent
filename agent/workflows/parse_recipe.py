@@ -74,8 +74,7 @@ class ParseRecipeWorkflow:
         instructions_concat = "\n".join(instructions)
 
         return (
-            f"I've parsed your recipe!\n"
-            f"If it looks correct, reply with 'yes' or 'no'.\n\n"
+            f"I've parsed your recipe! ✅\n\n"
             f"Name: {self.recipe.name}\n"
             f"Tags: {', '.join(self.recipe.tags)}\n"
             f"Prep Mins: {self.recipe.prep_minutes}\n"
