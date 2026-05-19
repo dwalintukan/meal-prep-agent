@@ -4,7 +4,9 @@ from agent.classifier import classify
 from agent.state import BotState
 from agent.workflows.meal_plan import MealPlanWorkflow
 from agent.workflows.parse_recipe import ParseRecipeWorkflow
+from models import Recipe
 from storage import RecipeStore, WeeklyPlanStore, ShoppingItemStore
+from storage import embed_recipe
 from utils import extract_url
 
 
@@ -36,3 +38,25 @@ def create_graph(
         url = extract_url(user_msg)
         reply = await ParseRecipeWorkflow(model_agent, url).run()
         return {"reply": reply}
+
+    async def confirm_recipe_node(state: BotState) -> BotState:
+        user_message = state["user_message"].strip().lower()
+        if user_message in ("yes", "y"):
+            # Insert Recipe to DB
+            recipe: Recipe = state["pending_recipe"]
+            recipe_id = await recipe_store.create(recipe)
+            # Missing id because it hasn't be inserted to the DB
+            recipe.id = recipe_id
+
+            try:
+                # Embed Recipe
+                await embed_recipe(vector_store, recipe)
+                await recipe_store.update_embedded([recipe_id])
+            except Exception as e:
+                print(f"Warning: embedding failed for recipe_id={recipe_id}: {e}")
+
+            return {
+                "reply": f"I've saved your {recipe.name} Recipe for future meal plans."
+            }
+
+        return {"reply": "Cancelled saving your recipe."}
