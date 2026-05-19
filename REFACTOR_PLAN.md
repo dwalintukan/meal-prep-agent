@@ -212,7 +212,7 @@ Each node is an async function `(state: BotState) -> dict` returning a partial s
 - [x] `classify_node(state)` — calls the LangChain classifier chain from Phase 1, returns `{"intent": ...}`
 - [x] `plan_node(state)` — runs `MealPlanWorkflow`, returns `{"reply": ...}`
 - [x] `parse_recipe_node(state)` — runs `ParseRecipeWorkflow`, returns `{"reply": ..., "pending_recipe": ...}`
-- [ ] `confirm_recipe_node(state)` — calls `interrupt()` to pause and wait for user yes/no
+- [x] `confirm_recipe_node(state)` — calls `interrupt()` to pause and wait for user yes/no
 - [ ] `save_recipe_node(state)` — saves `state["pending_recipe"]` to `recipe_store` + embeds it
 - [ ] `chat_node(state)` — runs `ChatWorkflow`, returns `{"reply": ...}`
 - [ ] `intent_router(state) -> str` — conditional edge function: returns node name based on `state["intent"]`

@@ -1,5 +1,7 @@
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
+from langgraph.types import interrupt
+
 from agent.classifier import classify
 from agent.state import BotState
 from agent.workflows.meal_plan import MealPlanWorkflow
@@ -36,10 +38,15 @@ def create_graph(
     async def parse_recipe_node(state: BotState) -> BotState:
         user_msg = state["user_message"]
         url = extract_url(user_msg)
-        reply = await ParseRecipeWorkflow(model_agent, url).run()
-        return {"reply": reply}
+        reply, pending_action = await ParseRecipeWorkflow(model_agent, url).run()
+        # TODO: handle missing pending action
+        return {"reply": reply, "pending_recipe": pending_action.data["recipe"]}
 
     async def confirm_recipe_node(state: BotState) -> BotState:
+        user_input = interrupt("Does your recipe look correct?")
+        return {"user_message": user_input}
+
+    async def save_recipe_node(state: BotState) -> BotState:
         user_message = state["user_message"].strip().lower()
         if user_message in ("yes", "y"):
             # Insert Recipe to DB
