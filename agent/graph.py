@@ -4,6 +4,7 @@ from langgraph.types import interrupt
 
 from agent.classifier import classify
 from agent.state import BotState
+from agent.workflows.chat import ChatWorkflow
 from agent.workflows.meal_plan import MealPlanWorkflow
 from agent.workflows.parse_recipe import ParseRecipeWorkflow
 from models import Recipe
@@ -26,7 +27,7 @@ def create_graph(
         return {"intent": result}
 
     async def meal_plan_node(state: BotState) -> BotState:
-        reply = await MealPlanWorkflow(
+        reply, pending_action = await MealPlanWorkflow(
             model_agent,
             recipe_store,
             weekly_plan_store,
@@ -67,3 +68,7 @@ def create_graph(
             }
 
         return {"reply": "Cancelled saving your recipe."}
+
+    async def chat_node(state: BotState) -> BotState:
+        reply, pending_action = await ChatWorkflow().run()
+        return {"reply": reply}
