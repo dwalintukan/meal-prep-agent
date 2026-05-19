@@ -43,8 +43,11 @@ def make_mock_vector_store(recipe_ids: list[int]) -> MagicMock:
 
 
 @pytest.fixture
-async def db(tmp_path):
-    conn = await init_db(str(tmp_path / "test.db"))
+async def db():
+    conn = await init_db()
+    await conn.execute(
+        "TRUNCATE recipes, weekly_plans, shopping_items, ingredients RESTART IDENTITY CASCADE"
+    )
     yield conn
     await close_db(conn)
 

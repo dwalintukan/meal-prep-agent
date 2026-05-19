@@ -1,8 +1,7 @@
 from typing import Protocol
 
-import aiosqlite
+import asyncpg
 from models.domain import Ingredient
-from storage.db import transaction
 
 
 class IIngredientStore(Protocol):
@@ -14,21 +13,20 @@ class IIngredientStore(Protocol):
 
 
 class IngredientStore:
-    def __init__(self, db: aiosqlite.Connection):
+    def __init__(self, db: asyncpg.connection.Connection):
         self.db = db
 
     async def create(self, ingredient: Ingredient, recipe_id: int) -> int:
-        async with transaction(self.db):
-            async with self.db.execute(
-                "INSERT INTO ingredients (recipe_id, name, unit, amount) VALUES (?, ?, ?, ?)",
-                (
-                    recipe_id,
-                    ingredient.name,
-                    ingredient.unit,
-                    ingredient.amount,
-                ),
-            ) as cur:
-                ingredient_id = cur.lastrowid
+        async with self.db.transaction():
+            ingredient_id = await self.db.fetchval(
+                "INSERT INTO ingredients (recipe_id, name, unit, amount) "
+                "VALUES ($1, $2, $3, $4) "
+                "RETURNING id",
+                recipe_id,
+                ingredient.name,
+                ingredient.unit,
+                ingredient.amount,
+            )
             if ingredient_id is None:
                 raise RuntimeError("INSERT into ingredients returned no rowid")
 
@@ -39,31 +37,30 @@ class IngredientStore:
             return ingredient_id
 
     async def get(self, id: int) -> Ingredient | None:
-        async with self.db.execute(
-            "SELECT * FROM ingredients WHERE id = ?", (id,)
-        ) as cur:
-            row = await cur.fetchone()
+        row = await self.db.fetchrow("SELECT * FROM ingredients WHERE id = $1", id)
         if row is None:
             return None
         return self._parse_ingredient(row)
 
     async def get_all(self) -> list[Ingredient]:
-        async with self.db.execute("SELECT * FROM ingredients") as cur:
-            rows = await cur.fetchall()
+        rows = await self.db.fetch("SELECT * FROM ingredients")
         return [self._parse_ingredient(r) for r in rows]
 
     async def update(self, ingredient: Ingredient) -> None:
-        async with transaction(self.db):
+        async with self.db.transaction():
             await self.db.execute(
-                "UPDATE ingredients SET name=?, unit=?, amount=? WHERE id=?",
-                (ingredient.name, ingredient.unit, ingredient.amount, ingredient.id),
+                "UPDATE ingredients SET name=$1, unit=$2, amount=$3 WHERE id=$4",
+                ingredient.name,
+                ingredient.unit,
+                ingredient.amount,
+                ingredient.id,
             )
 
     async def delete(self, id: int) -> None:
-        async with transaction(self.db):
-            await self.db.execute("DELETE FROM ingredients WHERE id = ?", (id,))
+        async with self.db.transaction():
+            await self.db.execute("DELETE FROM ingredients WHERE id = $1", id)
 
-    def _parse_ingredient(self, row: dict) -> Ingredient:
+    def _parse_ingredient(self, row) -> Ingredient:
         return Ingredient(
             id=row["id"], name=row["name"], unit=row["unit"], amount=row["amount"]
         )
