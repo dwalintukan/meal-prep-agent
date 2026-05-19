@@ -36,8 +36,3 @@ class WeeklyPlan(BaseModel):
     recipe_ids: list[int]
     shopping_items: list[ShoppingItem]
     created_at: datetime
-
-
-class PendingAction(BaseModel):
-    type: str
-    data: dict

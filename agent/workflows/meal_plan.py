@@ -5,8 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, Field
 
-from agent.workflows import Workflow
-from models import PendingAction, Recipe, ShoppingItem, WeeklyPlan
+from models import Recipe, ShoppingItem, WeeklyPlan
 from storage import RecipeStore, WeeklyPlanStore, ShoppingItemStore
 import utils.date
 
@@ -33,7 +32,7 @@ class MealPlanInput(BaseModel):
     notes: str = Field(description="Rationale and any caveats for choosing the recipes")
 
 
-class MealPlanWorkflow(Workflow):
+class MealPlanWorkflow:
     def __init__(
         self,
         model: BaseChatModel,
@@ -167,9 +166,9 @@ class MealPlanWorkflow(Workflow):
             f"{shopping_lines}"
         )
 
-    async def run(self) -> tuple[str, PendingAction | None]:
+    async def run(self) -> str:
         await self._fetch_prev_recipe_ids()
         await self._build_recipe_bank()
         await self._get_recommended_recipes()
         await self._persist_weekly_plan()
-        return self._format_message(), None
+        return self._format_message()
