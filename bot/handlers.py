@@ -24,17 +24,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         result = await graph.ainvoke(
             {"chat_id": chat_id, "user_message": user_message}, config=config
         )
-    bot_reply = result.get("reply", "")
+
+    # Wrap in list if needed
+    bot_reply = result.get("reply", [""])
+    if isinstance(bot_reply, str):
+        bot_reply = [bot_reply]
 
     # If graph is now paused at an interrupt, append its prompt to the reply
     new_snapshot = await graph.aget_state(config)
     for task in new_snapshot.tasks:
-        for intr in task.interrupts:
+        for interrupt in task.interrupts:
             # Append interrupt messages to existing reply
-            bot_reply = f"{bot_reply}\n\n{intr.value}" if bot_reply else intr.value
+            bot_reply.append(interrupt.value)
 
     print("Bot:", bot_reply)
     await _send_reply(update, bot_reply)
+
+
+async def _send_reply(update: Update, bot_reply: list[str]):
+    for reply in bot_reply:
+        for chunk in _split_message(reply, limit=4096):
+            try:
+                await update.message.reply_text(chunk, parse_mode="Markdown")
+            except Exception:
+                await update.message.reply_text(chunk)
 
 
 def _split_message(text: str, limit: int = 4096) -> list[str]:
@@ -60,11 +73,3 @@ def _split_message(text: str, limit: int = 4096) -> list[str]:
         chunks.append("\n".join(curr_chunk))
 
     return chunks
-
-
-async def _send_reply(update: Update, bot_reply: str):
-    for chunk in _split_message(bot_reply, limit=4096):
-        try:
-            await update.message.reply_text(chunk, parse_mode="Markdown")
-        except Exception:
-            await update.message.reply_text(chunk)

@@ -8,5 +8,5 @@ class BotState(TypedDict):
     chat_id: int
     user_message: str
     intent: ClassifiedIntent | None
-    reply: str | None
+    reply: str | list[str] | None
     pending_recipe: Recipe | None

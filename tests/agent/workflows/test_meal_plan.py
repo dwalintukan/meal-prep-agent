@@ -276,9 +276,10 @@ async def test_format_message_contains_week_header(workflow):
     workflow.new_shopping_items = []
 
     msg = workflow._format_message()
+    recipes_msg = msg[0]
 
-    assert "**Week of " in msg
-    assert utils.date.this_monday().isoformat() in msg
+    assert "**Week of " in recipes_msg
+    assert utils.date.this_monday().isoformat() in recipes_msg
 
 
 async def test_format_message_lists_recipes_with_tags(workflow):
@@ -296,11 +297,12 @@ async def test_format_message_lists_recipes_with_tags(workflow):
     workflow.new_shopping_items = []
 
     msg = workflow._format_message()
+    tags_msg = msg[0]
 
-    assert "Pasta" in msg
-    assert "italian" in msg
-    assert "Salad" in msg
-    assert "healthy" in msg
+    assert "Pasta" in tags_msg
+    assert "italian" in tags_msg
+    assert "Salad" in tags_msg
+    assert "healthy" in tags_msg
 
 
 async def test_format_message_lists_shopping_items(workflow):
@@ -319,10 +321,11 @@ async def test_format_message_lists_shopping_items(workflow):
     ]
 
     msg = workflow._format_message()
+    shopping_msg = msg[2]
 
-    assert "**Shopping List**" in msg
-    assert "Chicken" in msg
-    assert "200.0" in msg
+    assert "**Shopping List**" in shopping_msg
+    assert "Chicken" in shopping_msg
+    assert "200.0" in shopping_msg
 
 
 # ---------------------------------------------------------------------------
@@ -343,9 +346,10 @@ async def test_run_returns_nonempty_str(db):
         ShoppingItemStore(db),
         make_mock_vector_store([1, 2, 3, 4, 5]),
     )
-    result = await wf.run()
-    assert isinstance(result, str)
-    assert len(result[0]) > 0
+    msgs = await wf.run()
+    assert "Week of" in msgs[0]
+    assert "Notes" in msgs[1]
+    assert "Shopping List" in msgs[2]
 
 
 async def test_run_persists_weekly_plan_and_items(db):
@@ -392,8 +396,7 @@ async def test_run_with_no_previous_plan(db):
 
     assert wf.prev_recipe_ids == []
 
-    result = await wf.run()
-    assert isinstance(result, str)
-    assert "Week of" in result
-    assert "Notes" in result
-    assert "Shopping List" in result
+    msgs = await wf.run()
+    assert "Week of" in msgs[0]
+    assert "Notes" in msgs[1]
+    assert "Shopping List" in msgs[2]
