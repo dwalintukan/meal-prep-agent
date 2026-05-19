@@ -4,8 +4,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field, ValidationError
 
-from agent.workflows import Workflow
-from models import Recipe, PendingAction
+from models import Recipe
 from models.domain import Ingredient
 from utils.url import web_fetch
 
@@ -38,7 +37,7 @@ class ParseRecipeInput(BaseModel):
     tags: list[str] = Field(description="Hashtags describing the dish")
 
 
-class ParseRecipeWorkflow(Workflow):
+class ParseRecipeWorkflow:
     def __init__(
         self,
         model: BaseChatModel,
@@ -88,7 +87,7 @@ class ParseRecipeWorkflow(Workflow):
             f"{instructions_concat}\n"
         )
 
-    async def run(self) -> tuple[str, PendingAction | None]:
+    async def run(self) -> tuple[str, Recipe | None]:
         try:
             await self._parse_url()
         except ValidationError as e:
@@ -104,6 +103,4 @@ class ParseRecipeWorkflow(Workflow):
             print(f"[ParseRecipeWorkflow] Exception: {e}")
             return f"Unexpected error: {e}", None
 
-        return self._format_message(), PendingAction(
-            type="confirm_recipe", data={"recipe": self.recipe}
-        )
+        return self._format_message(), self.recipe
