@@ -1,9 +1,11 @@
 import os
+from contextlib import AsyncExitStack
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from telegram.ext import Application, MessageHandler, filters
 from langchain_chroma import Chroma
 from langchain_voyageai import VoyageAIEmbeddings
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 import chromadb
 
 from storage import (
@@ -58,6 +60,14 @@ async def post_init(application: Application) -> None:
     # Reconcilation
     await reconcile_recipes(recipe_store, vector_store)
 
+    # Create checkpointer (kept alive for app lifetime via exit stack)
+    exit_stack = AsyncExitStack()
+    checkpointer = await exit_stack.enter_async_context(
+        AsyncPostgresSaver.from_conn_string(os.getenv("DATABASE_URL"))
+    )
+    await checkpointer.setup()
+    application.bot_data["checkpointer_exit_stack"] = exit_stack
+
     # Create Graph
     graph = create_graph(
         model_classifier,
@@ -66,6 +76,7 @@ async def post_init(application: Application) -> None:
         weekly_plan_store,
         shopping_item_store,
         vector_store,
+        checkpointer=checkpointer,
     )
     application.bot_data["graph"] = graph
 
@@ -73,8 +84,14 @@ async def post_init(application: Application) -> None:
 
 
 async def post_shutdown(application: Application) -> None:
+    # Close DB
     db = application.bot_data["db"]
     await close_db(db)
+
+    # Close Checkpointer
+    exit_stack = application.bot_data.get("checkpointer_exit_stack")
+    if exit_stack:
+        await exit_stack.aclose()
 
 
 def run() -> None:

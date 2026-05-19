@@ -1,9 +1,8 @@
-import os
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langgraph.types import interrupt
 from langgraph.graph import StateGraph
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.constants import START, END
 
 from agent.classifier import Intent, classify
@@ -24,6 +23,7 @@ def create_graph(
     weekly_plan_store: WeeklyPlanStore,
     shopping_item_store: ShoppingItemStore,
     vector_store: VectorStore,
+    checkpointer: BaseCheckpointSaver,
 ):
     async def classify_intent(state: BotState) -> BotState:
         user_msg = state["user_message"]
@@ -111,8 +111,4 @@ def create_graph(
     workflow.add_edge("save_recipe", END)
     workflow.add_edge("chat", END)
 
-    # Setup checkpointing
-    with PostgresSaver.from_conn_string(os.getenv("DATABASE_URL")) as checkpointer:
-        checkpointer.setup()
-        graph = workflow.compile(checkpointer=checkpointer)
-        return graph
+    return workflow.compile(checkpointer=checkpointer)
