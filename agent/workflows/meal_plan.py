@@ -149,7 +149,7 @@ class MealPlanWorkflow:
         recipe_strs = []
         for idx, recipe_id in enumerate(self.new_recipe_ids):
             recipe = self.recipe_bank[recipe_id]
-            recipe_strs.append(f"{idx}. {recipe.name} ({', '.join(recipe.tags)})")
+            recipe_strs.append(f"{idx + 1}. {recipe.name} ({', '.join(recipe.tags)})")
         meal_lines = "\n".join(recipe_strs)
 
         shopping_strs = []
@@ -157,16 +157,17 @@ class MealPlanWorkflow:
             shopping_strs.append(f"- {si.ingredient_name} {si.unit} {si.amount}")
         shopping_lines = "\n".join(shopping_strs)
 
-        return (
-            f"**Week of {self.new_weekly_plan.timestamp.isoformat()}**\n"
-            f"{meal_lines}\n\n"
-            f"**Notes**\n"
-            f"{self.llm_notes}\n\n"
-            f"**Shopping List**\n"
-            f"{shopping_lines}"
+        # Separate messages for recipes, notes, and shopping list
+        msgs = []
+        msgs.append(
+            f"**Week of {self.new_weekly_plan.timestamp.isoformat()}**\n{meal_lines}"
         )
+        msgs.append(f"**Notes**\n{self.llm_notes}")
+        msgs.append(f"**Shopping List**\n{shopping_lines}")
 
-    async def run(self) -> str:
+        return msgs
+
+    async def run(self) -> list[str]:
         await self._fetch_prev_recipe_ids()
         await self._build_recipe_bank()
         await self._get_recommended_recipes()
