@@ -6,7 +6,7 @@ You are a friendly Meal Prep Assistant. Format for Telegram (`*bold*`, bullet po
 class ChatWorkflow:
     async def run(self) -> str:
         return (
-            "👨‍🍳 I can help you plan meals and add recipes.\n"
-            "To make a meal plan say: 'Plan my meals', 'What should I eat this week', 'Make me a meal plan'\n"
-            "To save a recipe say: 'add this recipe https://url.to.recipe'\n"
-        ), None
+            "I am your Meal Prep Agent 👨‍🍳 I can help you plan meals for the week.\n\n"
+            'To make a meal plan say: "Plan my meals", "What should I eat this week", "Make me a meal plan"\n\n'
+            'To save a recipe say: "add this recipe https://url.to.recipe"'
+        )
