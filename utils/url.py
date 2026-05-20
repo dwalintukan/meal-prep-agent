@@ -1,3 +1,4 @@
+import os
 import re
 from bs4 import BeautifulSoup
 import httpx
@@ -26,6 +27,10 @@ async def web_fetch(url: str) -> str:
 
 async def backup_web_fetch(url: str) -> str:
     """Using jina.ai as a backup web fetch provider."""
+    headers = {}
+    if api_key := os.getenv("JINA_API_KEY"):
+        headers["Authorization"] = f"Bearer {api_key}"
+
     async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-        resp = await client.get(f"https://r.jina.ai/{url}")
+        resp = await client.get(f"https://r.jina.ai/{url}", headers=headers)
         return resp.text
