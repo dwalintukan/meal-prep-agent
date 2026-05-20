@@ -72,32 +72,16 @@ def workflow_with_recipe():
 
 
 # ---------------------------------------------------------------------------
-# _parse_url
+# _parse_page_content
 # ---------------------------------------------------------------------------
 
 
-async def test_parse_url_calls_web_fetch_with_correct_url():
-    # Wrong URL means wrong page content is fetched — must verify the URL is forwarded unchanged
-    url = "https://example.com/recipe"
-    wf = ParseRecipeWorkflow(make_mock_model(make_parse_recipe_input()), url)
-    with patch(
-        "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
-    ) as mock_fetch:
-        mock_fetch.return_value = "page content"
-        await wf._parse_url()
-    mock_fetch.assert_called_once_with(url)
-
-
-async def test_parse_url_stores_recipe_with_embedded_false():
+async def test_parse_page_content_stores_recipe_with_embedded_false():
     # New recipes must start embedded=False
     wf = ParseRecipeWorkflow(
         make_mock_model(make_parse_recipe_input()), "https://example.com/recipe"
     )
-    with patch(
-        "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
-    ) as mock_fetch:
-        mock_fetch.return_value = "page content"
-        await wf._parse_url()
+    await wf._parse_page_content("page content")
     assert wf.recipe.embedded is False
 
 
@@ -156,6 +140,85 @@ async def test_run_success_returns_messages_and_recipe():
     assert isinstance(msgs, list)
     assert len(msgs) == 3
     assert recipe is not None
+
+
+async def test_run_calls_web_fetch_with_correct_url():
+    # Wrong URL means wrong page content is fetched — must verify the URL is forwarded unchanged
+    url = "https://example.com/recipe"
+    wf = ParseRecipeWorkflow(make_mock_model(make_parse_recipe_input()), url)
+    with patch(
+        "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
+    ) as mock_fetch:
+        mock_fetch.return_value = "page content"
+        await wf.run()
+    mock_fetch.assert_called_once_with(url)
+
+
+async def test_run_calls_backup_web_fetch_when_primary_parse_fails():
+    # Primary fetch returns content the LLM can't turn into a valid recipe — backup must be attempted
+    invalid_input = make_parse_recipe_input(ingredients=[])  # fails _validate_recipe
+    wf = ParseRecipeWorkflow(
+        make_mock_model(invalid_input), "https://example.com/recipe"
+    )
+    with (
+        patch(
+            "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
+        ) as mock_primary,
+        patch(
+            "agent.workflows.parse_recipe.backup_web_fetch", new_callable=AsyncMock
+        ) as mock_backup,
+    ):
+        mock_primary.return_value = "primary content"
+        mock_backup.return_value = "backup content"
+        await wf.run()
+    mock_backup.assert_called_once_with("https://example.com/recipe")
+
+
+async def test_run_returns_recipe_when_backup_web_fetch_succeeds():
+    # Primary parse fails validation; backup produces a valid recipe — caller gets list[str] + Recipe
+    invalid_input = make_parse_recipe_input(ingredients=[])
+    valid_input = make_parse_recipe_input()
+    model = MagicMock(spec=BaseChatModel)
+    model.with_structured_output.return_value.ainvoke = AsyncMock(
+        side_effect=[invalid_input, valid_input]
+    )
+    wf = ParseRecipeWorkflow(model, "https://example.com/recipe")
+    with (
+        patch(
+            "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
+        ) as mock_primary,
+        patch(
+            "agent.workflows.parse_recipe.backup_web_fetch", new_callable=AsyncMock
+        ) as mock_backup,
+    ):
+        mock_primary.return_value = "primary content"
+        mock_backup.return_value = "backup content"
+        msgs, recipe = await wf.run()
+    assert isinstance(msgs, list)
+    assert recipe is not None
+
+
+async def test_run_returns_error_when_both_fetches_fail():
+    # Both primary and backup return unparseable content — caller must get an error string, not None
+    invalid_input = make_parse_recipe_input(ingredients=[])
+    model = MagicMock(spec=BaseChatModel)
+    model.with_structured_output.return_value.ainvoke = AsyncMock(
+        return_value=invalid_input
+    )
+    wf = ParseRecipeWorkflow(model, "https://example.com/recipe")
+    with (
+        patch(
+            "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
+        ) as mock_primary,
+        patch(
+            "agent.workflows.parse_recipe.backup_web_fetch", new_callable=AsyncMock
+        ) as mock_backup,
+    ):
+        mock_primary.return_value = "primary content"
+        mock_backup.return_value = "backup content"
+        msgs, recipe = await wf.run()
+    assert isinstance(msgs, str)
+    assert recipe is None
 
 
 async def test_run_validation_error_returns_error_string_and_none():
