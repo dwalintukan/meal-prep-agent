@@ -77,20 +77,47 @@ Meal Prep Agent uses [yoyo](https://ollycope.com/software/yoyo/latest/) for sche
 
 To add a new migration, create `migrations/NNN-migration-name.sql`. It will be applied automatically on next startup.
 
-## Architecture
+## Agentic Workflow (LangGraph)
+
+The agent is built as a [LangGraph](https://langchain-ai.github.io/langgraph/) `StateGraph`. Each Telegram message is a graph invocation; nodes read and write a shared `BotState` that flows through the graph.
+
+### State
+
+```python
+class BotState(TypedDict):
+    chat_id: int
+    user_message: str
+    intent: ClassifiedIntent | None
+    reply: str | list[str] | None
+    pending_recipe: Recipe | None
+```
+
+### Graph structure
 
 <img width="782" height="926" alt="meal-prep-agent-flowchart" src="https://github.com/user-attachments/assets/8ee6cd39-a5d3-4ac5-9207-be164109a949" />
 
-A Telegram bot that uses Claude AI for meal planning. Messages are intent-classified, then routed to a workflow that calls Claude to select recipes or parse new ones.
-
 ```plaintext
-Telegram Message
-      ↓
-Intent Classifier (claude-haiku-4-5)
-      ├→ "plan"         → MealPlanWorkflow (claude-sonnet-4-6)
-      ├→ "parse_recipe" → ParseRecipeWorkflow (claude-sonnet-4-6)
-      └→ "chat"         → ChatWorkflow (claude-sonnet-4-6) # not implemented yet
+START
+  ↓
+classify_intent
+  ↓ (conditional)
+  ├→ create_meal_plan → END
+  ├→ parse_recipe → confirm_recipe ─┬→ save_recipe    → END
+  │                  (interrupt)    └→ discard_recipe  → END
+  └→ chat → END
 ```
+
+### Human-in-the-loop (interrupt)
+
+Recipe parsing is a two-turn flow. After `parse_recipe` extracts a recipe, the graph pauses at `confirm_recipe` using LangGraph's `interrupt()`. The bot sends the parsed recipe plus a confirmation prompt to the user, then halts.
+
+On the next message, the handler checks `graph.aget_state(config).next` — if the graph is paused, it resumes via `Command(resume=user_message)` instead of starting a new invocation. The user's reply routes to either `save_recipe` (persists to DB + embeds) or `discard_recipe`.
+
+### Checkpointing
+
+LangGraph's `AsyncPostgresSaver` backs the checkpointer, storing graph state in the same PostgreSQL database used for recipes. Each Telegram `chat_id` maps to a LangGraph `thread_id`, giving every user an isolated, persistent conversation thread. The checkpointer is created at startup inside an `AsyncExitStack` so its connection pool is cleanly closed on shutdown.
+
+This means graph state — including an in-progress recipe confirmation — survives bot restarts.
 
 ## RAG (Retrieval-Augmented Generation)
 
