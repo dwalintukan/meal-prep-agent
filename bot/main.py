@@ -2,7 +2,7 @@ import os
 from contextlib import AsyncExitStack
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
-from telegram.ext import Application, MessageHandler, filters
+from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from langchain_chroma import Chroma
 from langchain_voyageai import VoyageAIEmbeddings
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -57,9 +57,6 @@ async def post_init(application: Application) -> None:
     application.bot_data["vector_store"] = vector_store
     print("Initialized vector database")
 
-    # Reconcilation
-    await reconcile_recipes(recipe_store, vector_store)
-
     # Create checkpointer (kept alive for app lifetime via exit stack)
     exit_stack = AsyncExitStack()
     checkpointer = await exit_stack.enter_async_context(
@@ -67,6 +64,9 @@ async def post_init(application: Application) -> None:
     )
     await checkpointer.setup()
     application.bot_data["checkpointer_exit_stack"] = exit_stack
+
+    # Create recurring embedding reconcilation job (every 5 mins)
+    application.job_queue.run_repeating(_reconcile_job, interval=300, first=10)
 
     # Create Graph
     graph = create_graph(
@@ -92,6 +92,13 @@ async def post_shutdown(application: Application) -> None:
     exit_stack = application.bot_data.get("checkpointer_exit_stack")
     if exit_stack:
         await exit_stack.aclose()
+
+
+async def _reconcile_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    await reconcile_recipes(
+        context.application.bot_data["recipe_store"],
+        context.application.bot_data["vector_store"],
+    )
 
 
 def run() -> None:
