@@ -42,7 +42,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await _send_reply(update, bot_reply)
     except Exception as e:
         print(f"[handle_message] Unhandled exception: {e}")
-        await _send_reply(update, "Sorry, something went wrong. Please try again.")
+        await _send_reply(update, ["Sorry, something went wrong. Please try again."])
 
 
 async def _send_reply(update: Update, bot_reply: list[str]):
