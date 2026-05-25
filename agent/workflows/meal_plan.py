@@ -5,26 +5,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, Field
 
-from models import Recipe, ShoppingItem, WeeklyPlan
-from storage import RecipeStore, WeeklyPlanStore, ShoppingItemStore
+from models import Recipe, ShoppingItem, WeeklyPlan, PromptType
+from storage import PromptStore, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 import utils.date
-
-
-MEAL_PLAN_PROMPT = """
-You are a Meal Planning Assistant. Select 5 recipes for the week.
-
-You will receive:
-- A recipe bank as JSON: {id: {name, tags}}
-- A list of previously selected recipe_ids from last week
-
-Selection rules:
-1. Only pick recipe_ids that exist in the recipe bank. If there are no recipes, return an empty list.
-2. Select exactly 5 recipes for Mon - Fri.
-3. Avoid IDs in previous_ids where possible — variety across weeks matters.
-4. Vary the type of meal across the 5 selections.
-5. If the bank has fewer than 5 recipes, repeat the least-recently-used ones to reach 5.
-6. In the notes field, briefly explain your selections and any caveats (e.g. why you repeated a recipe).
-"""
 
 
 class MealPlanInput(BaseModel):
@@ -39,12 +22,14 @@ class MealPlanWorkflow:
         recipe_store: RecipeStore,
         weekly_plan_store: WeeklyPlanStore,
         shopping_item_store: ShoppingItemStore,
+        prompt_store: PromptStore,
         vector_store: VectorStore,
     ):
         self.model = model
         self.recipe_store = recipe_store
         self.weekly_plan_store = weekly_plan_store
         self.shopping_item_store = shopping_item_store
+        self.prompt_store = prompt_store
         self.vector_store = vector_store
 
         self.recipe_bank: dict[int, Recipe] = {}
@@ -74,14 +59,14 @@ class MealPlanWorkflow:
         self.recipe_bank = {r.id: r for r in recipes}
 
     async def _get_recommended_recipes(self) -> None:
+        prompt = await self.prompt_store.get(PromptType.PLAN)
+        sys_msg = SystemMessage(
+            content=prompt,
+            additional_kwargs={"cache_control": {"type": "ephemeral"}},
+        )
         recipe_bank_short = {
             rid: {"name": r.name, "tags": r.tags} for rid, r in self.recipe_bank.items()
         }
-
-        sys_msg = SystemMessage(
-            content=MEAL_PLAN_PROMPT,
-            additional_kwargs={"cache_control": {"type": "ephemeral"}},
-        )
         human_msg = HumanMessage(
             content=(
                 f"Recipe bank:\n{json.dumps(recipe_bank_short)}\n\n"

@@ -50,6 +50,7 @@ def create_graph(
                 recipe_store,
                 weekly_plan_store,
                 shopping_item_store,
+                prompt_store,
                 vector_store,
             ).run()
         except Exception as e:
