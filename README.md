@@ -83,6 +83,43 @@ Meal Prep Agent uses [yoyo](https://ollycope.com/software/yoyo/latest/) for sche
 
 To add a new migration, create `migrations/NNN-migration-name.sql`. It will be applied automatically on next startup.
 
+## Prompt Management
+
+System prompts are versioned and stored in the `prompts` table in Postgres. This lets you update prompts without redeploying the bot — the active version for each prompt type is loaded at runtime.
+
+There are four prompt types, one per agent node:
+
+| Type | Used by |
+| --- | --- |
+| `classifier` | Intent classification |
+| `plan` | Meal plan generation |
+| `parse_recipe` | Recipe parsing |
+| `chat` | General chat responses |
+
+Each type has at most one active version at a time. If no active prompt is found for a type, the node falls back to its hardcoded default.
+
+### CLI
+
+Use `manage_prompts.py` to insert and manage prompt versions:
+
+```bash
+# Add a new prompt version (--active promotes it immediately)
+uv run python manage_prompts.py add \
+  --type classifier \
+  --version 2 \
+  --file prompts/classifier_v2.txt \
+  --notes "tightened parse_recipe examples" \
+  --active
+
+# List all prompts across all types
+uv run python manage_prompts.py list
+
+# Promote a specific version by id
+uv run python manage_prompts.py activate 5
+```
+
+*Activating a version automatically deactivates all other versions of the same type.*
+
 ## Agentic Workflow (LangGraph)
 
 The agent is built as a [LangGraph](https://langchain-ai.github.io/langgraph/) `StateGraph`. Each Telegram message is a graph invocation; nodes read and write a shared `BotState` that flows through the graph.
@@ -176,7 +213,3 @@ Langfuse traces every LangGraph invocation when credentials are present. If the 
 ### Guardrails & Safety
 
 - Output validation on `save_recipe`: reject implausible calorie counts or structurally invalid recipes before persisting
-
-### Prompt Management
-
-- Version system prompts in `agent/prompts.py` with a `version` field so A/B tests and regressions are traceable in Langfuse
