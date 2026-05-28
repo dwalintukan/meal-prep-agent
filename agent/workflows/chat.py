@@ -16,6 +16,14 @@ class ChatWorkflow:
         self.model = model
         self.prompt_store = prompt_store
 
+        self._chat_input: ChatInput | None = None
+
+    def _format_message(self) -> list[str]:
+        if not self._chat_input:
+            return []
+
+        return [self._chat_input.reply]
+
     async def run(self) -> str:
         prompt = await self.prompt_store.get(PromptType.CHAT)
         sys_msg = SystemMessage(
@@ -25,6 +33,9 @@ class ChatWorkflow:
         human_msg = HumanMessage(content=self.message)
         messages = [sys_msg, human_msg]
 
-        resp = await self.model.with_structured_output(ChatInput).ainvoke(messages)
+        chat_input = await self.model.with_structured_output(ChatInput).ainvoke(
+            messages
+        )
+        self._chat_input = ChatInput(**chat_input.model_dump())
 
-        return resp
+        return self._format_message()
