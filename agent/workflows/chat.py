@@ -1,12 +1,11 @@
-CHAT_PROMPT = """
-You are a friendly Meal Prep Assistant. Format for Telegram (`*bold*`, bullet points, ≤4096 chars).
-"""
+from storage import PromptStore
+from models import PromptType
 
 
 class ChatWorkflow:
+    def __init__(self, prompt_store: PromptStore):
+        self.prompt_store = prompt_store
+
     async def run(self) -> str:
-        return (
-            "I am your Meal Prep Agent 👨‍🍳 I can help you plan meals for the week.\n\n"
-            'To make a meal plan say: "Plan my meals", "What should I eat this week", "Make me a meal plan"\n\n'
-            'To save a recipe say: "add this recipe https://url.to.recipe"'
-        )
+        prompt = await self.prompt_store.get(PromptType.CHAT)
+        return prompt
