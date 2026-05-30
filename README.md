@@ -103,8 +103,11 @@ Each type has at most one active version at a time. If no active prompt is found
 Use `manage_prompts.py` to insert and manage prompt versions:
 
 ```bash
+# Prefix the command with your DATABASE_URL.
+# e.g. DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mealprep"
+
 # Add a new prompt version (--active promotes it immediately)
-uv run python manage_prompts.py add \
+DATABASE_URL=<DATABASE_URL> uv run python manage_prompts.py add \
   --type classifier \
   --version 2 \
   --file prompts/classifier_v2.txt \
@@ -112,10 +115,10 @@ uv run python manage_prompts.py add \
   --active
 
 # List all prompts across all types
-uv run python manage_prompts.py list
+DATABASE_URL=<DATABASE_URL> uv run python manage_prompts.py list
 
 # Promote a specific version by id
-uv run python manage_prompts.py activate 5
+DATABASE_URL=<DATABASE_URL> uv run python manage_prompts.py activate 5
 ```
 
 *Activating a version automatically deactivates all other versions of the same type.*
