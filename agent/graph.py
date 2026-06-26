@@ -16,6 +16,10 @@ from storage import PromptStore, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 from storage import embed_recipe
 
 
+# Max number of Agent turns
+MAX_TURNS = 10
+
+
 def create_graph(
     model_agent: BaseChatModel,
     recipe_store: RecipeStore,
@@ -48,8 +52,15 @@ def create_graph(
         """Determines if the end state has been achieved."""
         last = state["messages"][-1]
         if getattr(last, "tool_calls", None):
+            # Check number of agent turns
+            turns = sum(1 for m in state["messages"] if isinstance(m, AIMessage))
+            if turns >= MAX_TURNS:
+                return END
+
+            # Execute tool calls
             return "tools"
 
+        # Last message was not a tool call
         return END
 
     def after_tools(state: BotState) -> str:
