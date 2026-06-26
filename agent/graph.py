@@ -63,7 +63,6 @@ def create_graph(
     checkpointer: BaseCheckpointSaver,
     langfuse_handler: CallbackHandler | None,
 ) -> CompiledStateGraph:
-    # Inject tools to model
     tools = make_tools(
         model_agent=model_agent,
         recipe_store=recipe_store,
@@ -72,6 +71,7 @@ def create_graph(
         prompt_store=prompt_store,
         vector_store=vector_store,
     )
+    tool_node = ToolNode(tools)
     model_with_tools = model_agent.bind_tools(tools)
 
     async def agent_node(state: BotState) -> BotState:
@@ -116,6 +116,12 @@ def create_graph(
     async def max_turns_reached(state: BotState) -> BotState:
         reply = "I'm having trouble completing that request. Please try again."
         return {"messages": [AIMessage(content=reply)]}
+
+    async def tools_node(state: BotState):
+        last = state["messages"][-1]
+        for tc in getattr(last, "tool_calls", []):
+            print(f"[node:tools] Calling {tc['name']} args={tc['args']}")
+        return await tool_node.ainvoke(state)
 
     def after_tools(state: BotState) -> str:
         """Execution middleware after tool calls."""
@@ -163,7 +169,7 @@ def create_graph(
 
     # Build graph
     workflow = StateGraph(BotState)
-    workflow.add_node("tools", ToolNode(tools))
+    workflow.add_node("tools", tools_node)
     workflow.add_node("agent", agent_node)
     workflow.add_node("max_turns_reached", max_turns_reached)
     workflow.add_node("confirm_recipe", confirm_recipe)
