@@ -87,14 +87,13 @@ To add a new migration, create `migrations/NNN-migration-name.sql`. It will be a
 
 System prompts are versioned and stored in the `prompts` table in Postgres. This lets you update prompts without redeploying the bot — the active version for each prompt type is loaded at runtime.
 
-There are four prompt types, one per agent node:
+There are three prompt types:
 
 | Type | Used by |
 | --- | --- |
-| `classifier` | Intent classification |
+| `agent` | Main agent reasoning loop |
 | `plan` | Meal plan generation |
 | `parse_recipe` | Recipe parsing |
-| `chat` | General chat responses |
 
 Each type has at most one active version at a time. If no active prompt is found for a type, the node falls back to its hardcoded default.
 
@@ -132,26 +131,40 @@ The agent is built as a [LangGraph](https://langchain-ai.github.io/langgraph/) `
 ```python
 class BotState(TypedDict):
     chat_id: int
+    messages: list[BaseMessage]
     user_message: str
-    intent: ClassifiedIntent | None
-    reply: str | list[str] | None
     pending_recipe: Recipe | None
 ```
 
 ### Graph structure
 
-<img width="782" height="926" alt="meal-prep-agent-flowchart" src="https://github.com/user-attachments/assets/8ee6cd39-a5d3-4ac5-9207-be164109a949" />
-
 ```plaintext
 START
   ↓
-classify_intent
-  ↓ (conditional)
-  ├→ create_meal_plan → END
-  ├→ parse_recipe → confirm_recipe ─┬→ save_recipe    → END
-  │                  (interrupt)    └→ discard_recipe  → END
-  └→ chat → END
+agent ←──────────────────────────────┐
+  ↓ (tool_calls present)             │
+tools ──────────────────────────────→┘
+  ↓ (pending_recipe set)
+confirm_recipe (interrupt)
+  ├→ save_recipe    → END
+  └→ discard_recipe → END
+
+agent → END  (no tool calls, no pending recipe)
+agent → max_turns_reached → END  (safety limit: 10 turns)
 ```
+
+Routing:
+- `should_continue`: tool calls present → `tools`; max turns exceeded → `max_turns_reached`; else → `END`
+- `after_tools`: `pending_recipe` set → `confirm_recipe`; else → back to `agent`
+
+### Tools
+
+| Tool | Description |
+| --- | --- |
+| `create_meal_plan()` | Generates and persists a weekly meal plan via `MealPlanWorkflow` |
+| `get_meal_plan()` | Retrieves the current week's meal plan |
+| `parse_recipe_url(url)` | Parses a recipe from a URL via `ParseRecipeWorkflow`; triggers the confirm flow |
+| `get_shopping_list()` | Returns the shopping list for the current week's plan |
 
 ### Human-in-the-loop (interrupt)
 
@@ -190,7 +203,6 @@ Langfuse traces every LangGraph invocation when credentials are present. If the 
 
 ## Design Decisions
 
-- **Multi-model routing** — `claude-haiku-4-5` for intent classification (fast, cheap); `claude-sonnet-4-6` for meal planning and recipe parsing (capable). Cost is optimized at the routing layer, not as an afterthought.
 - **Prompt caching** — All system prompts use `cache_control: ephemeral`, reducing latency and token cost on repeated calls.
 - **Forced tool schema** — The classifier uses a constrained tool definition to guarantee structured JSON output; no free-text parsing or regex needed.
 - **Conversation history** — SQLite-backed message store scoped per user, injected as context into the chat workflow.
