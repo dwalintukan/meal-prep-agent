@@ -1,4 +1,5 @@
 from asyncpg.connection import asyncpg
+from cachetools import TTLCache
 
 from models import Prompt, PromptType
 
@@ -6,14 +7,25 @@ from models import Prompt, PromptType
 class PromptStore:
     def __init__(self, db: asyncpg.connection.Connection):
         self.db = db
+        self._cache = TTLCache(maxsize=16, ttl=300)
 
     async def get(self, type: PromptType) -> Prompt | None:
+        # Return cached prompt if available
+        if type in self._cache:
+            return self._cache[type]
+
+        # Fetch from DB
         row = await self.db.fetchrow(
             "SELECT * FROM prompts WHERE type = $1 AND active = TRUE", type
         )
         if row is None:
             return None
-        return self._load_prompt(dict(row))
+        prompt = self._load_prompt(dict(row))
+
+        # Store in cache
+        self._cache[type] = prompt
+
+        return prompt
 
     def _load_prompt(self, row: dict) -> Prompt:
         return Prompt(

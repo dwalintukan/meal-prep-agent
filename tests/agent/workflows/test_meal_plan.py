@@ -235,7 +235,9 @@ async def test_persist_aggregates_shared_ingredients(db, mock_prompt_store):
     assert chicken_items[0].amount == 250.0
 
 
-async def test_persist_creates_one_shopping_item_per_unique_ingredient(db, mock_prompt_store):
+async def test_persist_creates_one_shopping_item_per_unique_ingredient(
+    db, mock_prompt_store
+):
     r1 = make_recipe(
         ingredients=[
             make_ingredient("Chicken", "g", 100.0),

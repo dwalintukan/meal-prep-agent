@@ -1,12 +1,12 @@
-from typing import TypedDict
+from typing import Annotated, TypedDict
+from langchain_core.messages import BaseMessage
+from langgraph.graph import add_messages
 
-from agent.classifier import ClassifiedIntent
 from models import Recipe
 
 
 class BotState(TypedDict):
     chat_id: int
+    messages: Annotated[list[BaseMessage], add_messages]
     user_message: str
-    intent: ClassifiedIntent | None
-    reply: str | list[str] | None
     pending_recipe: Recipe | None

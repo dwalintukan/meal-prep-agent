@@ -35,8 +35,6 @@ async def post_init(application: Application) -> None:
         langfuse_handler = None
 
     # Init Anthropic client
-    model_classifier = ChatAnthropic(model="claude-haiku-4-5-20251001", max_tokens=64)
-    application.bot_data["model_classifier"] = model_classifier
     model_agent = ChatAnthropic(model="claude-sonnet-4-6")
     application.bot_data["model_agent"] = model_agent
     print("Initialized Anthropic clients")
@@ -85,7 +83,6 @@ async def post_init(application: Application) -> None:
 
     # Create Graph
     graph = create_graph(
-        model_classifier=model_classifier,
         model_agent=model_agent,
         recipe_store=recipe_store,
         weekly_plan_store=weekly_plan_store,
