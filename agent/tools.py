@@ -18,7 +18,7 @@ def make_tools(args):
             args["prompt_store"],
             args["vector_store"],
         ).run()
-        return result
+        return "\n\n".join(result)
 
     @tool
     async def get_meal_plan() -> str:
@@ -28,7 +28,7 @@ def make_tools(args):
     async def parse_recipe(
         url: str,
         tool_call_id: Annotated[str, InjectedToolCallId],
-    ) -> str:
+    ) -> Command:
         """Parse and preview a recipe from a URL. The user will confirm before it's saved."""
         reply, recipe = await ParseRecipeWorkflow(
             args["model_agent"], url, args["prompt_store"]
