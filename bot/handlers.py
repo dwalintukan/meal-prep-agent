@@ -1,3 +1,4 @@
+from langchain_core.messages import HumanMessage
 from telegram import Update
 from telegram.ext import ContextTypes
 from langgraph.types import Command
@@ -16,6 +17,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         config = {"configurable": {"thread_id": chat_id}}
         graph = context.bot_data["graph"]
 
+        # Invoke next turn in graph based on interruption or not
         snapshot = await graph.aget_state(config)
         if snapshot.next:
             # Resume interrupted state (e.g. confirm_recipe)
@@ -23,13 +25,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         else:
             # Non-interrupted state
             result = await graph.ainvoke(
-                {"chat_id": chat_id, "user_message": user_message}, config=config
+                {
+                    "chat_id": chat_id,
+                    "user_message": user_message,
+                    "messages": [HumanMessage(content=user_message)],
+                },
+                config=config,
             )
 
         # Wrap in list if needed
-        bot_reply = result.get("reply") or [""]
-        if isinstance(bot_reply, str):
-            bot_reply = [bot_reply]
+        last_msg = result["messages"][-1]
+        content = last_msg.content
+        bot_reply = [content] if isinstance(content, str) and content else [""]
 
         # If graph is now paused at an interrupt, append its prompt to the reply
         new_snapshot = await graph.aget_state(config)
