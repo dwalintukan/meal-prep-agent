@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 class PromptType(str, Enum):
     AGENT = "agent"
-    CLASSIFIER = "classifier"
     PLAN = "plan"
     PARSE_RECIPE = "parse_recipe"
     CHAT = "chat"
