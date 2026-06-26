@@ -1,4 +1,5 @@
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import SystemMessage
 from langchain_core.vectorstores import VectorStore
 from langfuse.langchain import CallbackHandler
 from langgraph.graph.state import CompiledStateGraph
@@ -29,6 +30,9 @@ def create_graph(
     checkpointer: BaseCheckpointSaver,
     langfuse_handler: CallbackHandler | None,
 ) -> CompiledStateGraph:
+    async def agent_node(state: BotState) -> BotState:
+        sys = SystemMessage(content=)
+
     def parse_recipe_router(state: BotState) -> str:
         return "confirm_recipe" if state.get("pending_recipe") else END
 
