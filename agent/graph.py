@@ -59,10 +59,8 @@ def create_graph(
 
         return "agent"
 
-    def parse_recipe_router(state: BotState) -> str:
-        return "confirm_recipe" if state.get("pending_recipe") else END
-
     async def confirm_recipe(state: BotState) -> BotState:
+        """Prompts the user to confirm the parsed recipe."""
         user_input = interrupt(
             'Does your recipe look correct?\nRespond with "yes" or "no".'
         )
