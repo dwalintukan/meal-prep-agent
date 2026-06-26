@@ -29,46 +29,6 @@ def create_graph(
     checkpointer: BaseCheckpointSaver,
     langfuse_handler: CallbackHandler | None,
 ) -> CompiledStateGraph:
-    async def classify_intent(state: BotState) -> BotState:
-        user_msg = state["user_message"]
-        result = await classify(user_msg, model_classifier, prompt_store)
-        return {"intent": result}
-
-    async def intent_router(state: BotState) -> str:
-        match state["intent"].intent:
-            case Intent.PLAN:
-                return "create_meal_plan"
-            case Intent.PARSE_RECIPE:
-                return "parse_recipe"
-            case _:
-                return "chat"
-
-    async def create_meal_plan(state: BotState) -> BotState:
-        try:
-            reply = await MealPlanWorkflow(
-                model_agent,
-                recipe_store,
-                weekly_plan_store,
-                shopping_item_store,
-                prompt_store,
-                vector_store,
-            ).run()
-        except Exception as e:
-            print(f"[create_meal_plan] Error: {e}")
-            reply = ["Sorry, I couldn't generate a meal plan. Please try again."]
-        return {"reply": reply}
-
-    async def parse_recipe(state: BotState) -> BotState:
-        url = extract_url(state["user_message"])
-        if not url:
-            return {
-                "reply": "I couldn't find a URL in your message. Please include a recipe link.",
-                "pending_recipe": None,
-            }
-
-        reply, recipe = await ParseRecipeWorkflow(model_agent, url).run()
-        return {"reply": reply, "pending_recipe": recipe}
-
     def parse_recipe_router(state: BotState) -> str:
         return "confirm_recipe" if state.get("pending_recipe") else END
 
@@ -107,29 +67,18 @@ def create_graph(
         reply = f"I've saved your {recipe.name} Recipe for future meal plans."
         return {"reply": reply}
 
-    async def chat(state: BotState) -> BotState:
-        user_msg = state["user_message"]
-        reply = await ChatWorkflow(user_msg, model_agent, prompt_store).run()
-        return {"reply": reply}
-
     # Build graph
     workflow = StateGraph(BotState)
-    workflow.add_node("classify_intent", classify_intent)
-    workflow.add_node("create_meal_plan", create_meal_plan)
-    workflow.add_node("parse_recipe", parse_recipe)
     workflow.add_node("confirm_recipe", confirm_recipe)
     workflow.add_node("discard_recipe", discard_recipe)
     workflow.add_node("save_recipe", save_recipe)
-    workflow.add_node("chat", chat)
 
     # Add edges
     workflow.add_edge(START, "classify_intent")
-    workflow.add_conditional_edges("classify_intent", intent_router)
 
     workflow.add_conditional_edges("parse_recipe", parse_recipe_router)
     workflow.add_conditional_edges("confirm_recipe", confirm_recipe_router)
 
-    workflow.add_edge("create_meal_plan", END)
     workflow.add_edge("save_recipe", END)
     workflow.add_edge("discard_recipe", END)
     workflow.add_edge("chat", END)
