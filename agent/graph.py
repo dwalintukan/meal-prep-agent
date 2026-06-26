@@ -50,6 +50,12 @@ def create_graph(
         resp = await model_with_tools.ainvoke([sys] + state["messages"])
         return {"messages": [resp]}
 
+    def should_continue(state: BotState) -> str:
+        last = state["messages"][-1]
+        if getattr(last, "tool_calls", None):
+            return "tools"
+        return END
+
     def parse_recipe_router(state: BotState) -> str:
         return "confirm_recipe" if state.get("pending_recipe") else END
 
