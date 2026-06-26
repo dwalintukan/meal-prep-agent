@@ -79,7 +79,9 @@ def workflow_with_recipe(mock_prompt_store):
 async def test_parse_page_content_stores_recipe_with_embedded_false(mock_prompt_store):
     # New recipes must start embedded=False
     wf = ParseRecipeWorkflow(
-        make_mock_model(make_parse_recipe_input()), "https://example.com/recipe", mock_prompt_store
+        make_mock_model(make_parse_recipe_input()),
+        "https://example.com/recipe",
+        mock_prompt_store,
     )
     await wf._parse_page_content("page content")
     assert wf.recipe.embedded is False
@@ -130,7 +132,9 @@ def test_format_message_third_part_contains_numbered_instructions(workflow_with_
 async def test_run_success_returns_messages_and_recipe(mock_prompt_store):
     # End-to-end happy path: caller receives a list[str] and a Recipe, not None
     wf = ParseRecipeWorkflow(
-        make_mock_model(make_parse_recipe_input()), "https://example.com/recipe", mock_prompt_store
+        make_mock_model(make_parse_recipe_input()),
+        "https://example.com/recipe",
+        mock_prompt_store,
     )
     with patch(
         "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
@@ -145,7 +149,9 @@ async def test_run_success_returns_messages_and_recipe(mock_prompt_store):
 async def test_run_calls_web_fetch_with_correct_url(mock_prompt_store):
     # Wrong URL means wrong page content is fetched — must verify the URL is forwarded unchanged
     url = "https://example.com/recipe"
-    wf = ParseRecipeWorkflow(make_mock_model(make_parse_recipe_input()), url, mock_prompt_store)
+    wf = ParseRecipeWorkflow(
+        make_mock_model(make_parse_recipe_input()), url, mock_prompt_store
+    )
     with patch(
         "agent.workflows.parse_recipe.web_fetch", new_callable=AsyncMock
     ) as mock_fetch:
@@ -270,7 +276,9 @@ async def test_run_connect_error_returns_error_string_and_none(mock_prompt_store
     assert recipe is None
 
 
-async def test_run_unexpected_exception_returns_error_string_and_none(mock_prompt_store):
+async def test_run_unexpected_exception_returns_error_string_and_none(
+    mock_prompt_store,
+):
     # Unknown failure; the catch-all branch must still return a tuple, not re-raise
     wf = ParseRecipeWorkflow(
         MagicMock(spec=BaseChatModel), "https://example.com/recipe", mock_prompt_store

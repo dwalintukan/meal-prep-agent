@@ -39,7 +39,9 @@ async def test_classify_plan_intent_2(mock_prompt_store):
 
 async def test_classify_chat_intent(mock_prompt_store):
     client = make_mock_model("chat", 0.8)
-    result = await classify("how many calories are in pasta?", client, mock_prompt_store)
+    result = await classify(
+        "how many calories are in pasta?", client, mock_prompt_store
+    )
     assert isinstance(result, ClassifiedIntent)
     assert result.intent == Intent.CHAT
     assert result.confidence == 0.8
