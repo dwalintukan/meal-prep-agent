@@ -9,14 +9,14 @@ from agent import MealPlanWorkflow, ParseRecipeWorkflow
 from storage import PromptStore, RecipeStore, ShoppingItemStore, WeeklyPlanStore
 
 
-def make_tools(args):
-    model_agent: BaseChatModel = args["model_agent"]
-    recipe_store: RecipeStore = args["recipe_store"]
-    weekly_plan_store: WeeklyPlanStore = args["weekly_plan_store"]
-    shopping_item_store: ShoppingItemStore = args["shopping_item_store"]
-    prompt_store: PromptStore = args["prompt_store"]
-    vector_store: VectorStore = args["vector_store"]
-
+def make_tools(
+    model_agent: BaseChatModel,
+    recipe_store: RecipeStore,
+    weekly_plan_store: WeeklyPlanStore,
+    shopping_item_store: ShoppingItemStore,
+    prompt_store: PromptStore,
+    vector_store: VectorStore,
+):
     @tool
     async def create_meal_plan() -> str:
         """Generate and persist a weekly meal plan from saved recipes."""

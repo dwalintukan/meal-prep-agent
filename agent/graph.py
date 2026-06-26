@@ -28,14 +28,12 @@ def create_graph(
 ) -> CompiledStateGraph:
     # Inject tools to model
     tools = make_tools(
-        {
-            "model_agent": model_agent,
-            "recipe_store": recipe_store,
-            "weekly_plan_store": weekly_plan_store,
-            "shopping_item_store": shopping_item_store,
-            "prompt_store": prompt_store,
-            "vector_store": vector_store,
-        }
+        model_agent=model_agent,
+        recipe_store=recipe_store,
+        weekly_plan_store=weekly_plan_store,
+        shopping_item_store=shopping_item_store,
+        prompt_store=prompt_store,
+        vector_store=vector_store,
     )
     model_with_tools = model_agent.bind_tools(tools)
 
