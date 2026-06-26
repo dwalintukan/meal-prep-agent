@@ -45,16 +45,25 @@ def create_graph(
     model_with_tools = model_agent.bind_tools(tools)
 
     async def agent_node(state: BotState) -> BotState:
+        """Primary agent react loop."""
         prompt = await prompt_store.get(PromptType.AGENT)
         sys = SystemMessage(content=prompt)
         resp = await model_with_tools.ainvoke([sys] + state["messages"])
         return {"messages": [resp]}
 
     def should_continue(state: BotState) -> str:
+        """Determines if the end state has been achieved."""
         last = state["messages"][-1]
         if getattr(last, "tool_calls", None):
             return "tools"
         return END
+
+    def after_tools(state: BotState) -> str:
+        """Execution middleware after tool calls."""
+        if state.get("pending_recipe"):
+            return "confirm_recipe"
+
+        return "agent"
 
     def parse_recipe_router(state: BotState) -> str:
         return "confirm_recipe" if state.get("pending_recipe") else END
