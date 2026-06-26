@@ -7,23 +7,37 @@ from agent import MealPlanWorkflow, ParseRecipeWorkflow
 
 
 def make_tools(args):
+    model_agent = args["model_agent"]
+    recipe_store = args["recipe_store"]
+    weekly_plan_store = args["weekly_plan_store"]
+    shopping_item_store = args["shopping_item_store"]
+    prompt_store = args["prompt_store"]
+    vector_store = args["vector_store"]
+
     @tool
     async def create_meal_plan() -> str:
         """Generate and persist a weekly meal plan from saved recipes."""
         result = await MealPlanWorkflow(
-            args["model_agent"],
-            args["recipe_store"],
-            args["weekly_plan_store"],
-            args["shopping_item_store"],
-            args["prompt_store"],
-            args["vector_store"],
+            model_agent,
+            recipe_store,
+            weekly_plan_store,
+            shopping_item_store,
+            prompt_store,
+            vector_store,
         ).run()
         return "\n\n".join(result)
 
     @tool
     async def get_meal_plan() -> str:
-        """TBD"""
-        pass
+        """Get the current week's meal plan."""
+        plan = await weekly_plan_store.get_last_weekly_plan_recipe_ids()
+        if not plan:
+            return "No meal plan found."
+        recipes = await recipe_store.get_by_ids(plan.recipe_ids)
+        lines = [f"**Week of {plan.timestamp.isoformat()}**"]
+        for r in recipes:
+            lines.append(f"- {r.name} ({', '.join(r.tags)})")
+        return "\n".join(lines)
 
     @tool
     async def parse_recipe_url(
@@ -31,9 +45,7 @@ def make_tools(args):
         tool_call_id: Annotated[str, InjectedToolCallId],
     ) -> Command:
         """Parse and preview a recipe from a URL. The user will confirm before it's saved."""
-        reply, recipe = await ParseRecipeWorkflow(
-            args["model_agent"], url, args["prompt_store"]
-        ).run()
+        reply, recipe = await ParseRecipeWorkflow(model_agent, url, prompt_store).run()
         content = "\n\n".join(reply) if isinstance(reply, list) else str(reply)
 
         return Command(
@@ -44,11 +56,11 @@ def make_tools(args):
     @tool
     async def get_shopping_list() -> str:
         """Get the shopping list for the current week's meal plan."""
-        plan = await args["weekly_plan_store"].get_last_weekly_plan_recipe_ids()
+        plan = await weekly_plan_store.get_last_weekly_plan_recipe_ids()
         if not plan:
             return "No meal plan found. Ask me to create one first."
 
-        items = await args["shopping_item_store"].get_by_weekly_plan(plan.id)
+        items = await shopping_item_store.get_by_weekly_plan(plan.id)
         if not items:
             return "No shopping items found for the current plan."
 
