@@ -1,18 +1,21 @@
 from typing import Annotated
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
+from langchain_core.vectorstores import VectorStore
 from langgraph.types import Command
 
 from agent import MealPlanWorkflow, ParseRecipeWorkflow
+from storage import PromptStore, RecipeStore, ShoppingItemStore, WeeklyPlanStore
 
 
 def make_tools(args):
-    model_agent = args["model_agent"]
-    recipe_store = args["recipe_store"]
-    weekly_plan_store = args["weekly_plan_store"]
-    shopping_item_store = args["shopping_item_store"]
-    prompt_store = args["prompt_store"]
-    vector_store = args["vector_store"]
+    model_agent: BaseChatModel = args["model_agent"]
+    recipe_store: RecipeStore = args["recipe_store"]
+    weekly_plan_store: WeeklyPlanStore = args["weekly_plan_store"]
+    shopping_item_store: ShoppingItemStore = args["shopping_item_store"]
+    prompt_store: PromptStore = args["prompt_store"]
+    vector_store: VectorStore = args["vector_store"]
 
     @tool
     async def create_meal_plan() -> str:
@@ -33,10 +36,11 @@ def make_tools(args):
         plan = await weekly_plan_store.get_last_weekly_plan_recipe_ids()
         if not plan:
             return "No meal plan found."
+
         recipes = await recipe_store.get_by_ids(plan.recipe_ids)
         lines = [f"**Week of {plan.timestamp.isoformat()}**"]
-        for r in recipes:
-            lines.append(f"- {r.name} ({', '.join(r.tags)})")
+        for i, r in enumerate(recipes):
+            lines.append(f"{i + 1}. {r.name} ({', '.join(r.tags)})")
         return "\n".join(lines)
 
     @tool
