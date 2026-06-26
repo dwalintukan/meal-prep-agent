@@ -1,5 +1,5 @@
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
 from langchain_core.vectorstores import VectorStore
 from langfuse.langchain import CallbackHandler
 from langgraph.graph.state import CompiledStateGraph
@@ -18,6 +18,33 @@ from storage import embed_recipe
 
 # Max number of Agent turns
 MAX_TURNS = 10
+
+
+def _sanitize_messages(messages: list[BaseMessage]) -> list[BaseMessage]:
+    """
+    Inject synthetic ToolMessages for any AIMessage whose tool calls have no response.
+
+    Guards against corrupted checkpoint state where the process was killed after
+    an AIMessage was saved but before its ToolMessages were written.
+    """
+    result = []
+    for i, msg in enumerate(messages):
+        result.append(msg)
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            responded_ids = set()
+            j = i + 1
+            while j < len(messages) and isinstance(messages[j], ToolMessage):
+                responded_ids.add(messages[j].tool_call_id)
+                j += 1
+            for tc in msg.tool_calls:
+                if tc["id"] not in responded_ids:
+                    result.append(
+                        ToolMessage(
+                            content="Tool call was interrupted. Please retry.",
+                            tool_call_id=tc["id"],
+                        )
+                    )
+    return result
 
 
 def create_graph(
@@ -45,7 +72,8 @@ def create_graph(
         """Primary agent react loop."""
         prompt = await prompt_store.get(PromptType.AGENT)
         sys = SystemMessage(content=prompt.prompt)
-        resp = await model_with_tools.ainvoke([sys] + state["messages"])
+        messages = _sanitize_messages(state["messages"])
+        resp = await model_with_tools.ainvoke([sys] + messages)
         return {"messages": [resp]}
 
     def should_continue(state: BotState) -> str:
