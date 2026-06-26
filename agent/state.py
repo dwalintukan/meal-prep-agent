@@ -1,6 +1,5 @@
 from typing import TypedDict
 
-from agent.classifier import ClassifiedIntent
 from models import Recipe
 
 
