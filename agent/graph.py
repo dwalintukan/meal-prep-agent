@@ -17,7 +17,6 @@ from storage import embed_recipe
 
 
 def create_graph(
-    model_classifier: BaseChatModel,
     model_agent: BaseChatModel,
     recipe_store: RecipeStore,
     weekly_plan_store: WeeklyPlanStore,

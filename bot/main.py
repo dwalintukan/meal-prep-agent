@@ -85,7 +85,6 @@ async def post_init(application: Application) -> None:
 
     # Create Graph
     graph = create_graph(
-        model_classifier=model_classifier,
         model_agent=model_agent,
         recipe_store=recipe_store,
         weekly_plan_store=weekly_plan_store,
