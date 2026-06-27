@@ -18,9 +18,10 @@ def make_tools(
     vector_store: VectorStore,
 ):
     @tool
-    async def create_meal_plan() -> str:
+    async def create_meal_plan(user_input: str) -> str:
         """Generate and persist a weekly meal plan from saved recipes."""
         result = await MealPlanWorkflow(
+            user_input,
             model_agent,
             recipe_store,
             weekly_plan_store,

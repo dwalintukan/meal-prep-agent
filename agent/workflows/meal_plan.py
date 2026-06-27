@@ -18,6 +18,7 @@ class MealPlanInput(BaseModel):
 class MealPlanWorkflow:
     def __init__(
         self,
+        user_input: str,
         model: BaseChatModel,
         recipe_store: RecipeStore,
         weekly_plan_store: WeeklyPlanStore,
@@ -25,6 +26,7 @@ class MealPlanWorkflow:
         prompt_store: PromptStore,
         vector_store: VectorStore,
     ):
+        self.user_input = user_input
         self.model = model
         self.recipe_store = recipe_store
         self.weekly_plan_store = weekly_plan_store
@@ -46,11 +48,8 @@ class MealPlanWorkflow:
         self.prev_recipe_ids = prev_weekly_plan.recipe_ids if prev_weekly_plan else []
 
     async def _build_recipe_bank(self) -> None:
-        # TODO: inject prompt from user
         # Fetch short list of recipes from vector store
-        docs = await self.vector_store.asimilarity_search(
-            "varied weekday dinners", k=10
-        )
+        docs = await self.vector_store.asimilarity_search(self.user_input, k=10)
         candidate_ids = {int(d.metadata["recipe_id"]) for d in docs}
 
         all_ids = list(candidate_ids | set(self.prev_recipe_ids))
