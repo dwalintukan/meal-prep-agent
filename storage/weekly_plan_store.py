@@ -50,7 +50,7 @@ class WeeklyPlanStore:
             row = await conn.fetchrow("SELECT * FROM weekly_plans WHERE id = $1", id)
             if row is None:
                 return None
-            return await self._parse_weekly_plan(conn, row)
+            return await self._parse_weekly_plan(conn, dict(row))
 
     async def get_last_weekly_plan_recipe_ids(self) -> WeeklyPlan | None:
         async with self.db_pool.acquire() as conn:
@@ -59,7 +59,7 @@ class WeeklyPlanStore:
             )
             if row is None:
                 return None
-            return await self._parse_weekly_plan(conn, row)
+            return await self._parse_weekly_plan(conn, dict(row))
 
     async def update(self, plan: WeeklyPlan) -> None:
         async with self.db_pool.acquire() as conn:
