@@ -33,6 +33,7 @@ class ShoppingItem(BaseModel):
 
 class WeeklyPlan(BaseModel):
     id: int | None = None
+    user_id: str
     timestamp: date
     recipe_ids: list[int]
     shopping_items: list[ShoppingItem]

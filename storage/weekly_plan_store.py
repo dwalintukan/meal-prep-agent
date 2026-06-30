@@ -6,9 +6,11 @@ from models import WeeklyPlan, ShoppingItem
 
 
 class IWeeklyPlanStore(Protocol):
-    async def create(self, plan: WeeklyPlan) -> int: ...
+    async def create(self, plan: WeeklyPlan, user_id: str) -> int: ...
     async def get(self, id: int) -> WeeklyPlan | None: ...
-    async def get_last_weekly_plan_recipe_ids(self) -> WeeklyPlan | None: ...
+    async def get_last_weekly_plan_recipe_ids(
+        self, user_id: str
+    ) -> WeeklyPlan | None: ...
     async def update(self, plan: WeeklyPlan) -> None: ...
     async def delete(self, id: int) -> None: ...
 
@@ -17,13 +19,14 @@ class WeeklyPlanStore:
     def __init__(self, db_pool: asyncpg.Pool):
         self.db_pool = db_pool
 
-    async def create(self, plan: WeeklyPlan) -> int:
+    async def create(self, plan: WeeklyPlan, user_id: str) -> int:
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
                 weekly_plan_id = await conn.fetchval(
-                    "INSERT INTO weekly_plans (timestamp, recipe_ids, created_at) "
-                    "VALUES ($1, $2, $3) "
+                    "INSERT INTO weekly_plans (user_id, timestamp, recipe_ids, created_at) "
+                    "VALUES ($1, $2, $3, $4) "
                     "RETURNING id",
+                    user_id,
                     plan.timestamp,
                     json.dumps(plan.recipe_ids),
                     plan.created_at,
@@ -52,10 +55,11 @@ class WeeklyPlanStore:
                 return None
             return await self._parse_weekly_plan(conn, dict(row))
 
-    async def get_last_weekly_plan_recipe_ids(self) -> WeeklyPlan | None:
+    async def get_last_weekly_plan_recipe_ids(self, user_id: str) -> WeeklyPlan | None:
         async with self.db_pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT * FROM weekly_plans ORDER BY created_at DESC LIMIT 1",
+                "SELECT * FROM weekly_plans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+                user_id,
             )
             if row is None:
                 return None
@@ -95,6 +99,7 @@ class WeeklyPlanStore:
         ]
         return WeeklyPlan(
             id=row["id"],
+            user_id=row["user_id"],
             timestamp=row["timestamp"],
             recipe_ids=json.loads(row["recipe_ids"]),
             shopping_items=shopping_items,
