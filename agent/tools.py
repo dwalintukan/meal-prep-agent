@@ -27,9 +27,11 @@ def make_tools(
                 description="User's meal preferences or request used to find relevant recipes"
             ),
         ],
+        state: Annotated[BotState, InjectedState],
     ) -> str:
         """Generate and persist a weekly meal plan from saved recipes."""
         result = await MealPlanWorkflow(
+            state["user_id"],
             model_agent,
             recipe_store,
             weekly_plan_store,
