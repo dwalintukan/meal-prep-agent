@@ -1,5 +1,7 @@
-from bot import run
+import os
+import uvicorn
 
 if __name__ == "__main__":
     print("Starting Meal Prep Agent 🥞🍕🍜🤖")
-    run()
+    reload = os.getenv("HOT_RELOAD", "false") == "true"
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=reload)
