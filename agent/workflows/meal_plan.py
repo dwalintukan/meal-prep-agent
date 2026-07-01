@@ -18,6 +18,7 @@ class MealPlanInput(BaseModel):
 class MealPlanWorkflow:
     def __init__(
         self,
+        user_id: str,
         model: BaseChatModel,
         recipe_store: RecipeStore,
         weekly_plan_store: WeeklyPlanStore,
@@ -25,6 +26,7 @@ class MealPlanWorkflow:
         prompt_store: PromptStore,
         vector_store: VectorStore,
     ):
+        self.user_id = user_id
         self.model = model
         self.recipe_store = recipe_store
         self.weekly_plan_store = weekly_plan_store
@@ -40,8 +42,8 @@ class MealPlanWorkflow:
         self.new_shopping_items: list[ShoppingItem] = []
 
     async def _fetch_prev_recipe_ids(self) -> None:
-        prev_weekly_plan = (
-            await self.weekly_plan_store.get_last_weekly_plan_recipe_ids()
+        prev_weekly_plan = await self.weekly_plan_store.get_last_weekly_plan_recipe_ids(
+            self.user_id
         )
         self.prev_recipe_ids = prev_weekly_plan.recipe_ids if prev_weekly_plan else []
 
@@ -116,6 +118,7 @@ class MealPlanWorkflow:
 
         # Create weekly_plan
         weekly_plan = WeeklyPlan(
+            user_id=self.user_id,
             timestamp=utils.date.this_monday(),
             recipe_ids=self.new_recipe_ids,
             shopping_items=shopping_items,

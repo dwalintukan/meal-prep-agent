@@ -1,79 +1,79 @@
 import json
-from typing import Protocol
-
 import asyncpg
+
 from models import WeeklyPlan, ShoppingItem
 
 
-class IWeeklyPlanStore(Protocol):
-    async def create(self, plan: WeeklyPlan) -> int: ...
-    async def get(self, id: int) -> WeeklyPlan | None: ...
-    async def get_last_weekly_plan_recipe_ids(self) -> WeeklyPlan | None: ...
-    async def update(self, plan: WeeklyPlan) -> None: ...
-    async def delete(self, id: int) -> None: ...
-
-
 class WeeklyPlanStore:
-    def __init__(self, db: asyncpg.connection.Connection):
-        self.db = db
+    def __init__(self, db_pool: asyncpg.Pool):
+        self.db_pool = db_pool
 
     async def create(self, plan: WeeklyPlan) -> int:
-        async with self.db.transaction():
-            weekly_plan_id = await self.db.fetchval(
-                "INSERT INTO weekly_plans (timestamp, recipe_ids, created_at) "
-                "VALUES ($1, $2, $3) "
-                "RETURNING id",
-                plan.timestamp,
-                json.dumps(plan.recipe_ids),
-                plan.created_at,
-            )
-            if weekly_plan_id is None:
-                raise RuntimeError("INSERT into weekly_plans returned no rowid")
-
-            for item in plan.shopping_items:
-                await self.db.execute(
-                    "INSERT INTO shopping_items (weekly_plan_id, ingredient_name, unit, amount) "
-                    "VALUES ($1, $2, $3, $4)",
-                    weekly_plan_id,
-                    item.ingredient_name,
-                    item.unit,
-                    item.amount,
+        async with self.db_pool.acquire() as conn:
+            async with conn.transaction():
+                weekly_plan_id = await conn.fetchval(
+                    "INSERT INTO weekly_plans (user_id, timestamp, recipe_ids, created_at) "
+                    "VALUES ($1, $2, $3, $4) "
+                    "RETURNING id",
+                    plan.user_id,
+                    plan.timestamp,
+                    json.dumps(plan.recipe_ids),
+                    plan.created_at,
                 )
+                if weekly_plan_id is None:
+                    raise RuntimeError("INSERT into weekly_plans returned no rowid")
 
-            print(f"WeeklyPlan created: timestamp={plan.timestamp.isoformat()}")
+                for item in plan.shopping_items:
+                    await conn.execute(
+                        "INSERT INTO shopping_items (weekly_plan_id, ingredient_name, unit, amount) "
+                        "VALUES ($1, $2, $3, $4)",
+                        weekly_plan_id,
+                        item.ingredient_name,
+                        item.unit,
+                        item.amount,
+                    )
 
-            return weekly_plan_id
+                print(f"WeeklyPlan created: timestamp={plan.timestamp.isoformat()}")
+
+                return weekly_plan_id
 
     async def get(self, id: int) -> WeeklyPlan | None:
-        row = await self.db.fetchrow("SELECT * FROM weekly_plans WHERE id = $1", id)
-        if row is None:
-            return None
-        return await self._parse_weekly_plan(row)
+        async with self.db_pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM weekly_plans WHERE id = $1", id)
+            if row is None:
+                return None
+            return await self._parse_weekly_plan(conn, dict(row))
 
-    async def get_last_weekly_plan_recipe_ids(self) -> WeeklyPlan | None:
-        row = await self.db.fetchrow(
-            "SELECT * FROM weekly_plans ORDER BY created_at DESC LIMIT 1",
-        )
-        if row is None:
-            return None
-        return await self._parse_weekly_plan(row)
+    async def get_last_weekly_plan_recipe_ids(self, user_id: str) -> WeeklyPlan | None:
+        async with self.db_pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM weekly_plans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+                user_id,
+            )
+            if row is None:
+                return None
+            return await self._parse_weekly_plan(conn, dict(row))
 
     async def update(self, plan: WeeklyPlan) -> None:
-        async with self.db.transaction():
-            await self.db.execute(
-                "UPDATE weekly_plans SET timestamp=$1, recipe_ids=$2, created_at=$3 WHERE id=$4",
-                plan.timestamp,
-                json.dumps(plan.recipe_ids),
-                plan.created_at,
-                plan.id,
-            )
+        async with self.db_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "UPDATE weekly_plans SET timestamp=$1, recipe_ids=$2, created_at=$3 WHERE id=$4",
+                    plan.timestamp,
+                    json.dumps(plan.recipe_ids),
+                    plan.created_at,
+                    plan.id,
+                )
 
     async def delete(self, id: int) -> None:
-        async with self.db.transaction():
-            await self.db.execute("DELETE FROM weekly_plans WHERE id = $1", id)
+        async with self.db_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute("DELETE FROM weekly_plans WHERE id = $1", id)
 
-    async def _parse_weekly_plan(self, row) -> WeeklyPlan:
-        item_rows = await self.db.fetch(
+    async def _parse_weekly_plan(
+        self, conn: asyncpg.Connection, row: dict
+    ) -> WeeklyPlan:
+        item_rows = await conn.fetch(
             "SELECT * FROM shopping_items WHERE weekly_plan_id = $1", row["id"]
         )
         shopping_items = [
@@ -88,6 +88,7 @@ class WeeklyPlanStore:
         ]
         return WeeklyPlan(
             id=row["id"],
+            user_id=row["user_id"],
             timestamp=row["timestamp"],
             recipe_ids=json.loads(row["recipe_ids"]),
             shopping_items=shopping_items,
