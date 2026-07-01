@@ -22,6 +22,7 @@ from storage import (
 )
 from api.auth import router as auth_router
 from api.users import router as users_router
+from api.chat import router as chat_router
 
 
 @asynccontextmanager
@@ -102,6 +103,7 @@ app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY")
 app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(chat_router)
 
 
 @app.get("/healthcheck")
