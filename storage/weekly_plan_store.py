@@ -1,18 +1,7 @@
 import json
-from typing import Protocol
-
 import asyncpg
+
 from models import WeeklyPlan, ShoppingItem
-
-
-class IWeeklyPlanStore(Protocol):
-    async def create(self, plan: WeeklyPlan) -> int: ...
-    async def get(self, id: int) -> WeeklyPlan | None: ...
-    async def get_last_weekly_plan_recipe_ids(
-        self, user_id: str
-    ) -> WeeklyPlan | None: ...
-    async def update(self, plan: WeeklyPlan) -> None: ...
-    async def delete(self, id: int) -> None: ...
 
 
 class WeeklyPlanStore:

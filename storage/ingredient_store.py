@@ -1,15 +1,6 @@
-from typing import Protocol
-
 import asyncpg
+
 from models.domain import Ingredient
-
-
-class IIngredientStore(Protocol):
-    async def create(self, ingredient: Ingredient, recipe_id: int) -> int: ...
-    async def get(self, id: int) -> Ingredient | None: ...
-    async def get_all(self) -> list[Ingredient]: ...
-    async def update(self, ingredient: Ingredient) -> None: ...
-    async def delete(self, id: int) -> None: ...
 
 
 class IngredientStore:

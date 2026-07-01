@@ -1,15 +1,6 @@
-from typing import Protocol
-
 import asyncpg
+
 from models import ShoppingItem
-
-
-class IShoppingItemStore(Protocol):
-    async def create(self, item: ShoppingItem) -> int: ...
-    async def get(self, id: int) -> ShoppingItem | None: ...
-    async def get_by_weekly_plan(self, weekly_plan_id: int) -> list[ShoppingItem]: ...
-    async def update(self, id: int, item: ShoppingItem) -> None: ...
-    async def delete(self, id: int) -> None: ...
 
 
 class ShoppingItemStore:
