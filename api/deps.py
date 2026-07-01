@@ -1,8 +1,6 @@
 from uuid import UUID
 from fastapi import HTTPException, Request
 
-from storage import UserStore
-
 
 async def get_current_user(request: Request):
     user_id = request.session.get("user_id")
