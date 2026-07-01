@@ -3,10 +3,11 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
 from langchain_core.vectorstores import VectorStore
+from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 from pydantic import Field
 
-from agent import MealPlanWorkflow, ParseRecipeWorkflow
+from agent import BotState, MealPlanWorkflow, ParseRecipeWorkflow
 from storage import PromptStore, RecipeStore, ShoppingItemStore, WeeklyPlanStore
 
 
@@ -39,9 +40,9 @@ def make_tools(
         return "\n\n".join(result)
 
     @tool
-    async def get_meal_plan() -> str:
+    async def get_meal_plan(state: Annotated[BotState, InjectedState]) -> str:
         """Get the current week's meal plan."""
-        plan = await weekly_plan_store.get_last_weekly_plan_recipe_ids()
+        plan = await weekly_plan_store.get_last_weekly_plan_recipe_ids(state["user_id"])
         if not plan:
             return "No meal plan found."
 
