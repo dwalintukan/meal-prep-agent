@@ -17,6 +17,7 @@ from .shopping_item_store import (
     IShoppingItemStore as IShoppingItemStore,
 )
 from .vector_store import (
+    init_vector_store as init_vector_store,
     reconcile_recipes as reconcile_recipes,
     embed_recipe as embed_recipe,
 )

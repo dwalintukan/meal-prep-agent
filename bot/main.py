@@ -3,12 +3,9 @@ from contextlib import AsyncExitStack
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
-from langchain_chroma import Chroma
-from langchain_voyageai import VoyageAIEmbeddings
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langfuse import get_client as get_langfuse_client
 from langfuse.langchain import CallbackHandler
-import chromadb
 
 from storage import (
     PromptStore,
@@ -18,6 +15,7 @@ from storage import (
     RecipeStore,
     WeeklyPlanStore,
     ShoppingItemStore,
+    init_vector_store,
 )
 from .handlers import handle_message
 from agent import create_graph
@@ -52,21 +50,8 @@ async def post_init(application: Application) -> None:
     application.bot_data["prompt_store"] = prompt_store
     print("Initialized database")
 
-    # Init Embeddings
-    embeddings = VoyageAIEmbeddings(
-        voyage_api_key=os.getenv("VOYAGE_API_KEY"),
-        model="voyage-4",
-    )
-    application.bot_data["embeddings"] = embeddings
-    print("Initialized embeddings")
-
     # Init Vector DB
-    chroma_client = chromadb.HttpClient(
-        host=os.getenv("CHROMA_HOST"), port=int(os.getenv("CHROMA_PORT"))
-    )
-    vector_store = Chroma(
-        collection_name="recipes", embedding_function=embeddings, client=chroma_client
-    )
+    vector_store = await init_vector_store()
     application.bot_data["vector_store"] = vector_store
     print("Initialized vector database")
 
