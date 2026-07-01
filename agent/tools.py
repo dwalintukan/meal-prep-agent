@@ -69,9 +69,9 @@ def make_tools(
         )
 
     @tool
-    async def get_shopping_list() -> str:
+    async def get_shopping_list(state: Annotated[BotState, InjectedState]) -> str:
         """Get the shopping list for the current week's meal plan."""
-        plan = await weekly_plan_store.get_last_weekly_plan_recipe_ids()
+        plan = await weekly_plan_store.get_last_weekly_plan_recipe_ids(state["user_id"])
         if not plan:
             return "No meal plan found. Ask me to create one first."
 
