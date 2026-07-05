@@ -4,5 +4,6 @@ from .domain import (
     WeeklyPlan as WeeklyPlan,
     ShoppingItem as ShoppingItem,
     User as User,
+    UserCreate as UserCreate,
 )
 from .prompt import PromptType as PromptType, Prompt as Prompt

@@ -1,31 +1,31 @@
 from uuid import UUID
 import asyncpg
 
-from models import User
+from models import User, UserCreate
 
 
 class UserStore:
     def __init__(self, db_pool: asyncpg.Pool):
         self.db_pool = db_pool
 
-    async def create(self, user: User) -> UUID:
+    async def create(self, data: UserCreate) -> UUID:
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
-                user_id = await conn.fetchval(
+                id = await conn.fetchval(
                     "INSERT INTO users (name, email, google_sub) "
                     "VALUES ($1, $2, $3) RETURNING id",
-                    user.name,
-                    user.email,
-                    user.google_sub,
+                    data.name,
+                    data.email,
+                    data.google_sub,
                 )
-                if user_id is None:
+                if id is None:
                     raise RuntimeError("INSERT into users returned no rowid")
 
                 print(
-                    f"User created: id={user_id} email={user.email} google_sub={user.google_sub}"
+                    f"User created: id={id} name={data.name} email={data.email} google_sub={data.google_sub}"
                 )
 
-                return user_id
+                return id
 
     async def get(self, id: UUID) -> User | None:
         async with self.db_pool.acquire() as conn:

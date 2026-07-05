@@ -46,3 +46,9 @@ class User(BaseModel):
     email: str
     google_sub: str
     created_at: datetime
+
+
+class UserCreate(BaseModel):
+    name: str | None
+    email: str
+    google_sub: str
