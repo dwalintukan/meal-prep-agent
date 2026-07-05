@@ -34,6 +34,15 @@ class UserStore:
                 return None
             return self._parse_user(dict(row))
 
+    async def get_by_google_sub(self, google_sub: str) -> User | None:
+        async with self.db_pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM users WHERE google_sub = $1", google_sub
+            )
+            if row is None:
+                return None
+            return self._parse_user(dict(row))
+
     async def update(self, user: User) -> None:
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
