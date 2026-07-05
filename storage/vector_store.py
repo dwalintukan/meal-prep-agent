@@ -1,8 +1,45 @@
+import os
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
+from langchain_voyageai import VoyageAIEmbeddings
+from langchain_postgres import PGEngine, PGVectorStore
+from sqlalchemy.exc import ProgrammingError
 
 from models.domain import Recipe
 from storage.recipe_store import RecipeStore
+
+TABLE_NAME = "recipe_embeddings"
+VECTOR_SIZE = 1024
+
+
+async def init_vector_store() -> VectorStore:
+    """Initializes embeddings and the vector store"""
+    # Init embeddings
+    embeddings = VoyageAIEmbeddings(
+        voyage_api_key=os.getenv("VOYAGE_API_KEY"),
+        model="voyage-4",
+    )
+    print("Initialized embeddings")
+
+    # Init table
+    pg_engine = PGEngine.from_connection_string(url=os.getenv("ASYNC_DATABASE_URL"))
+    try:
+        await pg_engine.ainit_vectorstore_table(
+            table_name=TABLE_NAME, vector_size=VECTOR_SIZE
+        )
+        print("Initialized PGEngine + table")
+    except ProgrammingError:
+        pass
+
+    # Init vector store
+    store = await PGVectorStore.create(
+        engine=pg_engine,
+        table_name=TABLE_NAME,
+        embedding_service=embeddings,
+    )
+    print("Initialized PGVectorStore")
+
+    return store
 
 
 async def reconcile_recipes(recipe_store: RecipeStore, vector_store: VectorStore):

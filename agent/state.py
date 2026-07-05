@@ -6,7 +6,7 @@ from models import Recipe
 
 
 class BotState(TypedDict):
-    chat_id: int
+    user_id: str
     messages: Annotated[list[BaseMessage], add_messages]
     user_message: str
     pending_recipe: Recipe | None

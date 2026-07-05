@@ -1,3 +1,4 @@
+from uuid import UUID
 from pydantic import BaseModel
 from datetime import datetime, date
 
@@ -32,7 +33,22 @@ class ShoppingItem(BaseModel):
 
 class WeeklyPlan(BaseModel):
     id: int | None = None
+    user_id: UUID
     timestamp: date
     recipe_ids: list[int]
     shopping_items: list[ShoppingItem]
     created_at: datetime
+
+
+class User(BaseModel):
+    id: UUID
+    name: str | None = None
+    email: str
+    google_sub: str
+    created_at: datetime
+
+
+class UserCreate(BaseModel):
+    name: str | None
+    email: str
+    google_sub: str
