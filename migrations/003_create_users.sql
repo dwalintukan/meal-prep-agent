@@ -1,6 +1,3 @@
--- Install pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
-
 -- Create users table for multi-tenant usage
 CREATE TABLE IF NOT EXISTS users (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

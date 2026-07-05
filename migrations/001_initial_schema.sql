@@ -1,3 +1,6 @@
+-- Install pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE IF NOT EXISTS recipes (
     id           SERIAL PRIMARY KEY,
     name         TEXT    NOT NULL,
