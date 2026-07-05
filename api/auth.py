@@ -1,9 +1,12 @@
 import os
 import secrets
 from urllib.parse import urlencode
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.routing import RedirectResponse
 import httpx
+
+from models import User, UserCreate
+from storage import UserStore
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -30,7 +33,10 @@ async def google_login(request: Request):
 
 @router.get("/google/callback")
 async def google_callback(request: Request, code: str, state: str):
-    assert state == request.session.pop("oauth_state"), "Invalid state"
+    # Check for CSRF attacks on state
+    if state != request.session.pop("oauth_state", None):
+        raise HTTPException(status_code=400, detail="Invalid state")
+
     async with httpx.AsyncClient() as client:
         # Exchange code for tokens
         token_res = await client.post(
@@ -43,6 +49,8 @@ async def google_callback(request: Request, code: str, state: str):
                 "grant_type": "authorization_code",
             },
         )
+        # Raise error if Google OAuth returned 4xx/5xx
+        token_res.raise_for_status()
         tokens = token_res.json()
 
         # Fetch profile
@@ -51,12 +59,27 @@ async def google_callback(request: Request, code: str, state: str):
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
         )
         user = user_res.json()
-        print(f"Logged in as: {user}")
-        request.session["user"] = {
-            "id": user["sub"],
-            "email": user["email"],
-            "name": user["name"],
-        }
+
+        # Create/update user
+        google_sub = user["sub"]
+        user_store: UserStore = request.app.state.user_store
+        existing_user = await user_store.get_by_google_sub(google_sub)
+        if not existing_user:
+            user_id = await user_store.create(
+                UserCreate(
+                    name=user["name"], email=user["email"], google_sub=google_sub
+                )
+            )
+        else:
+            existing_user.name = user["name"]
+            existing_user.email = user["email"]
+            await user_store.update(existing_user)
+            user_id = existing_user.id
+
+        # Store user_id in session
+        request.session["user_id"] = str(user_id)
+        print(f"User logged in: {user_id}")
+
         return RedirectResponse("/")
 
 
