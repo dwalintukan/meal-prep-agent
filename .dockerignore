@@ -1,7 +1,7 @@
 # Build fresh inside the image; never copy local artifacts or secrets.
 **/node_modules
 **/dist
-.venv
+**/.venv
 .git
 .gitignore
 .github

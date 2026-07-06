@@ -8,12 +8,21 @@ Use a Telegram Bot to interact with the Agent.
 
 ## Commands
 
+The backend lives in `backend/` and the React frontend in `frontend/`. Run all
+`uv` commands from `backend/`.
+
 ```bash
+# Backend (run from backend/)
+cd backend
+
 # Install dependencies
 uv sync
 
-# Run the bot
+# Run the backend only
 uv run python main.py
+
+# Run the backend + frontend together for local dev (open http://localhost:5173)
+uv run python scripts/dev.py
 
 # Run all tests
 uv run pytest
@@ -24,6 +33,14 @@ uv run pytest tests/test_foo.py::test_bar
 # Lint and format
 uv run ruff check .
 uv run ruff format .
+```
+
+```bash
+# Frontend (run from frontend/)
+cd frontend
+npm install       # first-time setup
+npm run dev       # dev server (proxies API to :8000)
+npm run build     # production build -> frontend/dist
 ```
 
 ## Environment

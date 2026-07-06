@@ -1,6 +1,6 @@
 """Run the FastAPI backend and the Vite frontend together for local development.
 
-    uv run python scripts/dev.py
+    cd backend && uv run python scripts/dev.py
 
 Starts the backend with hot reload on :8000 and the Vite dev server on :5173.
 Vite proxies API routes to the backend, so open http://localhost:5173.
@@ -14,21 +14,25 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-UI_DIR = ROOT / "frontend"
+# backend/scripts/dev.py -> parents[2] is the repo root.
+ROOT = Path(__file__).resolve().parents[2]
+BACKEND_DIR = ROOT / "backend"
+FRONTEND_DIR = ROOT / "frontend"
 
 
 def main() -> int:
     npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
     if npm is None:
         sys.exit("npm not found on PATH. Install Node.js to run the frontend.")
-    if not (UI_DIR / "node_modules").exists():
-        sys.exit("frontend/node_modules missing — run `npm --prefix frontend install` first.")
+    if not (FRONTEND_DIR / "node_modules").exists():
+        sys.exit(
+            "frontend/node_modules missing — run `npm install` in the frontend/ directory first."
+        )
 
     backend_env = {**os.environ, "HOT_RELOAD": "true"}
     procs = [
-        subprocess.Popen([sys.executable, "main.py"], cwd=ROOT, env=backend_env),
-        subprocess.Popen([npm, "run", "dev"], cwd=UI_DIR),
+        subprocess.Popen([sys.executable, "main.py"], cwd=BACKEND_DIR, env=backend_env),
+        subprocess.Popen([npm, "run", "dev"], cwd=FRONTEND_DIR),
     ]
 
     try:

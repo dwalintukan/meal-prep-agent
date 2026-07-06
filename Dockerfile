@@ -10,21 +10,21 @@ RUN npm run build
 
 # --- Stage 2: Python backend serving the API + built SPA (single process) ---
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS backend
-WORKDIR /app
+WORKDIR /app/backend
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/backend/.venv/bin:$PATH"
 
 # Install Python dependencies first for layer caching.
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-# Application source.
-COPY . .
+# Backend source.
+COPY backend/ ./
 
-# Built SPA from stage 1 (frontend/dist is .dockerignore'd, so copy it in).
-COPY --from=frontend /app/frontend/dist ./frontend/dist
+# Built SPA from stage 1, placed as a sibling of backend/ (matches api/main.py).
+COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s \

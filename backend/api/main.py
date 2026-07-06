@@ -116,7 +116,8 @@ async def healthcheck():
 
 # Serve the built React SPA when present (production). In dev the frontend is
 # served by Vite and frontend/dist won't exist, so this block is skipped.
-_frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+# backend/api/main.py -> parents[2] is the repo root; frontend/ is its sibling.
+_frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 if _frontend_dist.exists():
     app.mount(
         "/assets",
