@@ -23,6 +23,7 @@ dependencies = [
     "langchain-postgres>=0.0.17",
     "uvicorn>=0.49.0",
     "itsdangerous>=2.2.0",
+    "structlog>=24.4.0",
 ]
 
 [project.optional-dependencies]
