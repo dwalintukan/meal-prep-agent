@@ -11,6 +11,9 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langfuse import get_client as get_langfuse_client
 from starlette.staticfiles import StaticFiles
 
+import structlog
+
+from logging_config import configure_logging
 from agent import create_graph
 from storage import (
     PromptStore,
@@ -27,6 +30,12 @@ from api.users import router as users_router
 from api.chat import router as chat_router
 from api.meal_plans import router as meal_plans_router
 from api.recipes import router as recipes_router
+from api.middleware import RequestLoggingMiddleware
+
+# Configure unified logging before the app (and Uvicorn) start emitting logs.
+configure_logging()
+
+log = structlog.get_logger()
 
 
 @asynccontextmanager
@@ -38,11 +47,11 @@ async def lifespan(app: FastAPI):
     shopping_item_store = ShoppingItemStore(db_pool)
     prompt_store = PromptStore(db_pool)
     user_store = UserStore(db_pool)
-    print("Initialized database")
+    log.info("startup", step="database")
 
     # Init Vector DB
     vector_store = await init_vector_store()
-    print("Initialized vector database")
+    log.info("startup", step="vector_database")
 
     # LangGraph checkpointer
     async with AsyncPostgresSaver.from_conn_string(
@@ -53,15 +62,15 @@ async def lifespan(app: FastAPI):
         # Init LangFuse
         langfuse = get_langfuse_client()
         if langfuse.auth_check():
-            print("Initialized and authenticated LangFuse client")
+            log.info("startup", step="langfuse", authenticated=True)
             langfuse_handler = CallbackHandler()
         else:
-            print("LangFuse authentication failed. Check your credentials and host.")
+            log.warning("startup", step="langfuse", authenticated=False)
             langfuse_handler = None
 
         # Init Anthropic client
         model_agent = ChatAnthropic(model="claude-sonnet-4-6")
-        print("Initialized Anthropic clients")
+        log.info("startup", step="anthropic")
 
         # Create Graph
         graph = create_graph(
@@ -106,6 +115,9 @@ async def _reconcile_recipes_loop(recipe_store, vector_store):
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY"))
+# Added last so it wraps SessionMiddleware and is the outermost layer, binding
+# request context before anything else runs.
+app.add_middleware(RequestLoggingMiddleware)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(chat_router)
