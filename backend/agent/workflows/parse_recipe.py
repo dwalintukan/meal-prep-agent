@@ -11,6 +11,11 @@ from utils import web_fetch, backup_web_fetch
 
 log = structlog.get_logger()
 
+# Tag applied to the structured-output LLM call so the chat stream can filter
+# out its raw-JSON tokens (see api/chat.py). The parsed recipe is delivered as a
+# dedicated "recipe" SSE event instead.
+RECIPE_PARSE_TAG = "recipe_parse"
+
 
 class ParseRecipeInput(BaseModel):
     name: str = Field(description="Recipe name")
@@ -49,7 +54,7 @@ class ParseRecipeWorkflow:
         human_msg = HumanMessage(content=page_content)
         recipe_input = await self.model.with_structured_output(
             ParseRecipeInput, method="json_schema"
-        ).ainvoke([sys_msg, human_msg])
+        ).ainvoke([sys_msg, human_msg], config={"tags": [RECIPE_PARSE_TAG]})
 
         # Validate if able to parse
         if self._validate_recipe(recipe_input):
