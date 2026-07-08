@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
+from agent import RECIPE_PARSE_TAG
 from api.deps import get_current_user
 from models import User
 
@@ -12,9 +13,10 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 def _chunk_text(content) -> str:
-    """Extract streamed text from an AIMessageChunk's content.
+    """
+    Extract streamed text from an AIMessageChunk's content.
 
-    With tools bound, ChatAnthropic returns content as a list of block dicts
+    With tools bound, Anthropic returns content as a list of block dicts
     (text and tool_use) rather than a plain string; concatenate the text ones.
     """
     if isinstance(content, str):
@@ -52,11 +54,29 @@ async def chat_stream(
                 invocation, config=config, version="v2"
             ):
                 if event["event"] == "on_chat_model_stream":
+                    # Skip the recipe-parse structured-output call: its content is
+                    # raw JSON. The recipe is emitted as a "recipe" event below.
+                    if RECIPE_PARSE_TAG in event.get("tags", []):
+                        continue
+
+                    # Concat all the text blocks and return as a whole.
                     text = _chunk_text(event["data"]["chunk"].content)
                     if text:
                         yield f"data: {json.dumps({'type': 'token', 'content': text})}\n\n"
 
             new_snapshot = await graph.aget_state(config)
+
+            # A parsed recipe awaiting confirmation is rendered client-side
+            # as a RecipeCard rather than streamed text.
+            pending_recipe = new_snapshot.values.get("pending_recipe")
+            if pending_recipe:
+                payload = {
+                    "type": "recipe",
+                    "recipe": pending_recipe.model_dump(mode="json"),
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+
+            # Handle interrupts sent from the graph at checkpoints.
             for task in new_snapshot.tasks:
                 for interrupt_obj in task.interrupts:
                     yield f"event: interrupt\ndata: {json.dumps({'value': interrupt_obj.value})}\n\n"
