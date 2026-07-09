@@ -6,7 +6,7 @@ from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, Field
 import structlog
 
-from models import Recipe, ShoppingItem, WeeklyPlan, PromptType
+from models import Recipe, ShoppingItem, WeeklyPlan, PromptType, WeeklyPlanCreate
 from storage import PromptStore, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 import utils.date
 
@@ -120,12 +120,11 @@ class MealPlanWorkflow:
             shopping_items.append(shopping_item)
 
         # Create weekly_plan
-        weekly_plan = WeeklyPlan(
+        weekly_plan = WeeklyPlanCreate(
             user_id=self.user_id,
             timestamp=utils.date.this_monday(),
             recipe_ids=self.new_recipe_ids,
             shopping_items=shopping_items,
-            created_at=utils.date.today(),
         )
 
         # Insert WeeklyPlan and ShoppingItems to DB

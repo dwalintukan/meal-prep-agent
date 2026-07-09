@@ -56,12 +56,19 @@ class ShoppingItemCreate(BaseModel):
 
 
 class WeeklyPlan(BaseModel):
-    id: int | None = None
+    id: int
     user_id: UUID
     timestamp: date
     recipe_ids: list[int]
     shopping_items: list[ShoppingItem]
     created_at: datetime
+
+
+class WeeklyPlanCreate(BaseModel):
+    user_id: UUID
+    timestamp: date
+    recipe_ids: list[int]
+    shopping_items: list[ShoppingItem]
 
 
 class User(BaseModel):
