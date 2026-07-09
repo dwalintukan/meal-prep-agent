@@ -9,7 +9,8 @@
       "Bash(find *)",
       "Bash(source *)",
       "WebFetch(*)",
-      "Grep(*)"
+      "Grep(*)",
+      "Bash(npx tsc *)"
     ]
   }
 }
