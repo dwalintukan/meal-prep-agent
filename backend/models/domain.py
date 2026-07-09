@@ -68,7 +68,7 @@ class WeeklyPlanCreate(BaseModel):
     user_id: UUID
     timestamp: date
     recipe_ids: list[int]
-    shopping_items: list[ShoppingItem]
+    shopping_items: list[ShoppingItemCreate]
 
 
 class User(BaseModel):

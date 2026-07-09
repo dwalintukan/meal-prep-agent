@@ -6,7 +6,14 @@ from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, Field
 import structlog
 
-from models import Recipe, ShoppingItem, WeeklyPlan, PromptType, WeeklyPlanCreate
+from models import (
+    Recipe,
+    ShoppingItem,
+    ShoppingItemCreate,
+    WeeklyPlan,
+    PromptType,
+    WeeklyPlanCreate,
+)
 from storage import PromptStore, RecipeStore, WeeklyPlanStore, ShoppingItemStore
 import utils.date
 
@@ -112,7 +119,7 @@ class MealPlanWorkflow:
         shopping_items = []
         for key, amount in agg_ingredients.items():
             name, unit = key
-            shopping_item = ShoppingItem(
+            shopping_item = ShoppingItemCreate(
                 ingredient_name=name,
                 unit=unit,
                 amount=amount,
