@@ -10,6 +10,13 @@ class Ingredient(BaseModel):
     amount: float
 
 
+class IngredientCreate(BaseModel):
+    recipe_id: int
+    name: str
+    unit: str
+    amount: float
+
+
 class Recipe(BaseModel):
     id: int | None = None
     name: str
