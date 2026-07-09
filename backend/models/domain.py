@@ -4,7 +4,7 @@ from datetime import datetime, date
 
 
 class Ingredient(BaseModel):
-    id: int | None = None
+    id: int
     name: str
     unit: str
     amount: float
@@ -18,7 +18,7 @@ class IngredientCreate(BaseModel):
 
 
 class Recipe(BaseModel):
-    id: int | None = None
+    id: int
     name: str
     instructions: list[str]
     ingredients: list[Ingredient]
@@ -41,7 +41,7 @@ class RecipeCreate(BaseModel):
 
 
 class ShoppingItem(BaseModel):
-    id: int | None = None
+    id: int
     weekly_plan_id: int | None = None
     ingredient_name: str
     unit: str
