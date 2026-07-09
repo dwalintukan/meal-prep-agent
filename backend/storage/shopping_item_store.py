@@ -1,7 +1,7 @@
 import asyncpg
 import structlog
 
-from models import ShoppingItem
+from models import ShoppingItem, ShoppingItemCreate
 
 log = structlog.get_logger()
 
@@ -10,17 +10,17 @@ class ShoppingItemStore:
     def __init__(self, db_pool: asyncpg.Pool):
         self.db_pool = db_pool
 
-    async def create(self, item: ShoppingItem) -> int:
+    async def create(self, data: ShoppingItemCreate) -> int:
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
                 shopping_item_id = await conn.fetchval(
                     "INSERT INTO shopping_items (weekly_plan_id, ingredient_name, unit, amount) "
                     "VALUES ($1, $2, $3, $4) "
                     "RETURNING id",
-                    item.weekly_plan_id,
-                    item.ingredient_name,
-                    item.unit,
-                    item.amount,
+                    data.weekly_plan_id,
+                    data.ingredient_name,
+                    data.unit,
+                    data.amount,
                 )
                 if shopping_item_id is None:
                     raise RuntimeError("INSERT into shopping_items returned no rowid")
@@ -28,8 +28,8 @@ class ShoppingItemStore:
                 log.info(
                     "shopping_item_created",
                     shopping_item_id=shopping_item_id,
-                    weekly_plan_id=item.weekly_plan_id,
-                    ingredient_name=item.ingredient_name,
+                    weekly_plan_id=data.weekly_plan_id,
+                    ingredient_name=data.ingredient_name,
                 )
 
                 return shopping_item_id

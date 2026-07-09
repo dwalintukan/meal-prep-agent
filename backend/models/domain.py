@@ -48,6 +48,13 @@ class ShoppingItem(BaseModel):
     amount: float
 
 
+class ShoppingItemCreate(BaseModel):
+    weekly_plan_id: int | None = None
+    ingredient_name: str
+    unit: str
+    amount: float
+
+
 class WeeklyPlan(BaseModel):
     id: int | None = None
     user_id: UUID

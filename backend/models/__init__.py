@@ -5,6 +5,7 @@ from .domain import (
     RecipeCreate as RecipeCreate,
     WeeklyPlan as WeeklyPlan,
     ShoppingItem as ShoppingItem,
+    ShoppingItemCreate as ShoppingItemCreate,
     User as User,
     UserCreate as UserCreate,
 )
