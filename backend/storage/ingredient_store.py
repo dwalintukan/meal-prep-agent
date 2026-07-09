@@ -1,7 +1,7 @@
 import asyncpg
 import structlog
 
-from models.domain import Ingredient
+from models import Ingredient, IngredientCreate
 
 log = structlog.get_logger()
 
@@ -10,17 +10,17 @@ class IngredientStore:
     def __init__(self, db_pool: asyncpg.Pool):
         self.db_pool = db_pool
 
-    async def create(self, ingredient: Ingredient, recipe_id: int) -> int:
+    async def create(self, data: IngredientCreate) -> int:
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
                 ingredient_id = await conn.fetchval(
                     "INSERT INTO ingredients (recipe_id, name, unit, amount) "
                     "VALUES ($1, $2, $3, $4) "
                     "RETURNING id",
-                    recipe_id,
-                    ingredient.name,
-                    ingredient.unit,
-                    ingredient.amount,
+                    data.recipe_id,
+                    data.name,
+                    data.unit,
+                    data.amount,
                 )
                 if ingredient_id is None:
                     raise RuntimeError("INSERT into ingredients returned no rowid")
@@ -28,8 +28,8 @@ class IngredientStore:
                 log.info(
                     "ingredient_created",
                     ingredient_id=ingredient_id,
-                    recipe_id=recipe_id,
-                    name=ingredient.name,
+                    recipe_id=data.recipe_id,
+                    name=data.name,
                 )
 
                 return ingredient_id
