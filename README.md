@@ -1,4 +1,4 @@
-# Meal Prep Agent
+# Forkcast
 
 An AI Agent helping you solve one of the hardest questions out there:
 
@@ -74,6 +74,36 @@ backend on `:8000`, so the session cookie and Google OAuth redirect work same-or
 into the Python image (stage 2). At runtime the FastAPI backend serves both the API and the
 built static assets from a single process on `:8000` — there is no separate frontend server.
 
+## Landing Page
+
+The public marketing site lives in `landing/` and is a **separate** [Astro](https://astro.build/)
+app — not part of the React SPA in `frontend/`. It builds to pre-rendered static HTML for SEO and
+deploys independently to a CDN at the apex domain, while the authenticated app runs on the `app.`
+subdomain.
+
+```bash
+# Landing (run from landing/)
+cd landing
+npm install       # first-time setup
+npm run dev       # dev server (http://localhost:4321)
+npm run build     # static build -> landing/dist
+npm run preview   # preview the production build
+```
+
+**SEO.** `src/layouts/Layout.astro` holds the per-page `<title>`, meta description, canonical, and
+Open Graph / Twitter tags. `@astrojs/sitemap` emits `sitemap-index.xml`, and `public/robots.txt`
+points at it. Before deploying, set your real apex domain in **two** places (both use an
+`example.com` placeholder): `site:` in `astro.config.mjs` and the `Sitemap:` line in
+`public/robots.txt`.
+
+**Interactivity.** The page is fully static HTML except the email capture form
+(`src/components/SignupForm.tsx`), which hydrates as a React island. Point it at your email service
+by setting `PUBLIC_SIGNUP_ENDPOINT` (it POSTs `{ "email": "..." }`).
+
+**Deploy.** `npm run build` outputs `landing/dist`; deploy that directory to your CDN
+(Cloudflare Pages / Netlify / Vercel) with build command `npm run build` and output dir `dist`.
+No Dockerfile changes — the landing deploy is fully decoupled from the backend.
+
 ## Environment
 
 Create an `.env` file in `/backend/.env`. See `.env.example` for details of required/optional environment variables.
@@ -82,7 +112,7 @@ Create an `.env` file in `/backend/.env`. See `.env.example` for details of requ
 
 ## Database Setup
 
-Meal Prep Agent requires a running PostgreSQL instance. The quickest way is Docker:
+The app requires a running PostgreSQL instance. The quickest way is Docker:
 
 ```bash
 docker run -d \
@@ -114,7 +144,7 @@ docker stop mealprep-postgres && docker rm mealprep-postgres
 
 ### Migrations
 
-Meal Prep Agent uses [yoyo](https://ollycope.com/software/yoyo/latest/) for schema migrations against Postgres. Migrations run synchronously at startup before the bot begins accepting messages. No manual step required.
+[yoyo](https://ollycope.com/software/yoyo/latest/) is used for running schema migrations against Postgres. Migrations run synchronously at startup before the bot begins accepting messages. No manual step required.
 
 To add a new migration, create `migrations/NNN-migration-name.sql`. It will be applied automatically on next startup.
 
@@ -218,7 +248,7 @@ This means graph state — including an in-progress recipe confirmation — surv
 
 ## RAG (Retrieval-Augmented Generation)
 
-Meal Prep Agent uses RAG to surface relevant recipes when building a meal plan, avoiding the need to pass your entire recipe library to Claude on every request.
+RAG is used to surface relevant recipes when building a meal plan, avoiding the need to pass your entire recipe library to Claude on every request.
 
 **How it works:**
 
