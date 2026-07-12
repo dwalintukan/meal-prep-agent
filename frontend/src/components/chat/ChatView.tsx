@@ -55,7 +55,7 @@ export function ChatView() {
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Message the meal prep agent…"
+            placeholder="Message your personalized chef..."
             disabled={streaming}
             autoFocus
           />
