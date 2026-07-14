@@ -9,5 +9,7 @@ from .domain import (
     ShoppingItemCreate as ShoppingItemCreate,
     User as User,
     UserCreate as UserCreate,
+    WaitlistSignup as WaitlistSignup,
+    WaitlistSignupCreate as WaitlistSignupCreate,
 )
 from .prompt import PromptType as PromptType, Prompt as Prompt

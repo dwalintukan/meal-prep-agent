@@ -8,7 +8,7 @@ from tests.factories import TEST_USER_ID
 async def db():
     conn = await init_db()
     await conn.execute(
-        "TRUNCATE users, recipes, weekly_plans, shopping_items, ingredients RESTART IDENTITY CASCADE"
+        "TRUNCATE users, recipes, weekly_plans, shopping_items, ingredients, waitlist_signups RESTART IDENTITY CASCADE"
     )
     await conn.execute(
         "INSERT INTO users (id, email, google_sub) VALUES ($1, $2, $3)",
