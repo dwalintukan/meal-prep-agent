@@ -82,3 +82,15 @@ class UserCreate(BaseModel):
     name: str | None
     email: str
     google_sub: str
+
+
+class WaitlistSignup(BaseModel):
+    id: UUID
+    email: str
+    source: str | None = None
+    created_at: datetime
+
+
+class WaitlistSignupCreate(BaseModel):
+    email: str
+    source: str | None = None

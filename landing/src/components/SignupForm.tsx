@@ -2,12 +2,11 @@ import { useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
-// CONFIG — point PUBLIC_SIGNUP_ENDPOINT at your email service
-// (Mailchimp, ConvertKit, Resend, Formspree, or your own API).
-// The form POSTs JSON: { "email": "user@example.com" }
+// CONFIG — API_URL is the backend base URL (e.g. https://api.forkcast.app).
+// The form POSTs JSON { "email": "user@example.com" } to `${API_URL}/waitlist`.
 // ─────────────────────────────────────────────────────────────
-const SIGNUP_ENDPOINT =
-  import.meta.env.PUBLIC_SIGNUP_ENDPOINT ?? "https://your-api.example.com/signup";
+const API_URL = import.meta.env.PUBLIC_API_URL ?? "http://localhost:8000";
+const SIGNUP_ENDPOINT = `${API_URL}/waitlist`;
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -30,7 +29,7 @@ export default function SignupForm({ id, dark = false }: Props) {
       const res = await fetch(SIGNUP_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, source: "landing" }),
       });
       setStatus(res.ok ? "success" : "error");
     } catch {

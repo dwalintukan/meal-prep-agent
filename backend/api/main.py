@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import os
 from pathlib import Path
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from langchain_anthropic import ChatAnthropic
@@ -10,7 +11,6 @@ from langfuse.langchain import CallbackHandler
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langfuse import get_client as get_langfuse_client
 from starlette.staticfiles import StaticFiles
-
 import structlog
 
 from logging_config import configure_logging
@@ -20,6 +20,7 @@ from storage import (
     RecipeStore,
     ShoppingItemStore,
     UserStore,
+    WaitlistStore,
     WeeklyPlanStore,
     init_db,
     init_vector_store,
@@ -27,6 +28,7 @@ from storage import (
 )
 from api.auth import router as auth_router
 from api.users import router as users_router
+from api.waitlist import router as waitlist_router
 from api.chat import router as chat_router
 from api.meal_plans import router as meal_plans_router
 from api.recipes import router as recipes_router
@@ -47,6 +49,7 @@ async def lifespan(app: FastAPI):
     shopping_item_store = ShoppingItemStore(db_pool)
     prompt_store = PromptStore(db_pool)
     user_store = UserStore(db_pool)
+    waitlist_store = WaitlistStore(db_pool)
     log.info("startup", step="database")
 
     # Init Vector DB
@@ -90,6 +93,7 @@ async def lifespan(app: FastAPI):
         app.state.shopping_item_store = shopping_item_store
         app.state.prompt_store = prompt_store
         app.state.user_store = user_store
+        app.state.waitlist_store = waitlist_store
         app.state.vector_store = vector_store
         app.state.graph = graph
 
@@ -114,12 +118,27 @@ async def _reconcile_recipes_loop(recipe_store, vector_store):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# Add middleware
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY"))
 # Added last so it wraps SessionMiddleware and is the outermost layer, binding
 # request context before anything else runs.
 app.add_middleware(RequestLoggingMiddleware)
+# CORS added after RequestLoggingMiddleware so it is outermost and answers the
+# landing page's cross-origin preflight (OPTIONS) before anything else runs.
+# Origins are comma-separated in CORS_ALLOW_ORIGINS; defaults to Astro dev.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ALLOW_ORIGINS").split(","),
+    allow_methods=["POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+    allow_credentials=False,
+)
+
+# Include routers
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(waitlist_router)
 app.include_router(chat_router)
 app.include_router(meal_plans_router)
 app.include_router(recipes_router)

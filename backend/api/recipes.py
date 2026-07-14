@@ -8,7 +8,7 @@ router = APIRouter(prefix="/recipes", tags=["recipes"])
 
 
 @router.get("/{id}")
-async def me(id: int, request: Request, user: User = Depends(get_current_user)):
+async def get(id: int, request: Request, user: User = Depends(get_current_user)):
     recipe_store: RecipeStore = request.app.state.recipe_store
     recipe: Recipe | None = await recipe_store.get(id)
 

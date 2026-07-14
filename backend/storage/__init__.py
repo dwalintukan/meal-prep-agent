@@ -14,3 +14,4 @@ from .vector_store import (
 )
 from .prompt_store import PromptStore as PromptStore
 from .user_store import UserStore as UserStore
+from .waitlist_store import WaitlistStore as WaitlistStore
