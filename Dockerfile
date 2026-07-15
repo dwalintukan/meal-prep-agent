@@ -1,14 +1,7 @@
 # syntax=docker/dockerfile:1
 
-# --- Stage 1: build the React frontend -> frontend/dist ---
-FROM node:22-slim AS frontend
-WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ ./
-RUN npm run build
-
-# --- Stage 2: Python backend serving the API + built SPA (single process) ---
+# Python backend serving the API only. The React SPA is built and hosted
+# separately on Vercel (app.forkcast.app); see frontend/vercel.json.
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS backend
 WORKDIR /app/backend
 
@@ -22,9 +15,6 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 # Backend source.
 COPY backend/ ./
-
-# Built SPA from stage 1, placed as a sibling of backend/ (matches api/main.py).
-COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s \

@@ -1,16 +1,13 @@
 import asyncio
 from contextlib import asynccontextmanager
 import os
-from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from langchain_anthropic import ChatAnthropic
 from langfuse.langchain import CallbackHandler
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langfuse import get_client as get_langfuse_client
-from starlette.staticfiles import StaticFiles
 import structlog
 
 from logging_config import configure_logging
@@ -120,19 +117,27 @@ async def _reconcile_recipes_loop(recipe_store, vector_store):
 app = FastAPI(lifespan=lifespan)
 
 # Add middleware
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY"))
+# https_only in production so the session cookie is Secure; the app calls the API
+# cross-origin (app.forkcast.app -> api.forkcast.app), same site, so Lax suffices.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET_KEY"),
+    https_only=os.getenv("ENVIRONMENT", "development") == "production",
+)
 # Added last so it wraps SessionMiddleware and is the outermost layer, binding
 # request context before anything else runs.
 app.add_middleware(RequestLoggingMiddleware)
 # CORS added after RequestLoggingMiddleware so it is outermost and answers the
-# landing page's cross-origin preflight (OPTIONS) before anything else runs.
-# Origins are comma-separated in CORS_ALLOW_ORIGINS; defaults to Astro dev.
+# cross-origin preflight (OPTIONS) before anything else runs. Serves both the
+# landing page's waitlist POST and the app's credentialed API calls. Origins are
+# comma-separated in CORS_ALLOW_ORIGINS (landing + app.forkcast.app).
+# allow_credentials=True requires explicit origins (no wildcard).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ALLOW_ORIGINS").split(","),
-    allow_methods=["POST", "OPTIONS"],
-    allow_headers=["Content-Type"],
-    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept"],
+    allow_credentials=True,
 )
 
 # Include routers
@@ -147,20 +152,3 @@ app.include_router(recipes_router)
 @app.get("/healthcheck")
 async def healthcheck():
     return {"status": "ok"}
-
-
-# Serve the built React SPA when present (production). In dev the frontend is
-# served by Vite and frontend/dist won't exist, so this block is skipped.
-# backend/api/main.py -> parents[2] is the repo root; frontend/ is its sibling.
-_frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
-if _frontend_dist.exists():
-    app.mount(
-        "/assets",
-        StaticFiles(directory=_frontend_dist / "assets"),
-        name="assets",
-    )
-
-    # MUST BE LAST ROUTE! Returns index.html for client-side routes.
-    @app.get("/{full_path:path}")
-    async def spa_fallback(full_path: str):
-        return FileResponse(_frontend_dist / "index.html")
