@@ -12,6 +12,9 @@ from storage import UserStore
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
+# Origin of the SPA to return to after login/logout. Empty in dev (redirects stay
+# relative); set to https://app.forkcast.app in production.
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
 log = structlog.get_logger()
 
@@ -84,10 +87,10 @@ async def google_callback(request: Request, code: str, state: str):
         request.session["user_id"] = str(user_id)
         log.info("user_logged_in", user_id=str(user_id))
 
-        return RedirectResponse("/")
+        return RedirectResponse(f"{FRONTEND_URL}/")
 
 
 @router.get("/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse("/")
+    return RedirectResponse(f"{FRONTEND_URL}/")

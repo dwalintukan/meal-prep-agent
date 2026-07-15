@@ -57,22 +57,31 @@ both at once:
 
 | Server | Port | Serves the frontend from | Rebuilds on save? |
 | --- | --- | --- | --- |
-| FastAPI backend | `:8000` | `frontend/dist` (last `npm run build`) | ❌ no |
+| FastAPI backend | `:8000` | — (API only) | — |
 | Vite dev server | `:5173` | `frontend/src` (live) | ✅ hot module reload |
 
 **Open http://localhost:5173 for development.** Vite serves your source files directly and
 hot-reloads on every save, so frontend changes appear instantly — no build step. It proxies
 the API routes (`/auth`, `/users`, `/chat`, `/meal-plans`, `/recipes`, `/healthcheck`) to the
-backend on `:8000`, so the session cookie and Google OAuth redirect work same-origin.
+backend on `:8000`, so calls stay same-origin locally (leave `VITE_API_BASE` unset).
 
-> ⚠️ **DO NOT** open http://localhost:8000 during development. The backend only serves the
-> static assets from `frontend/dist`, which is whatever `npm run build` produced last — so it
-> shows stale UI until you rebuild manually. Use `:5173` and you never need `npm run build`.
+> ⚠️ **DO NOT** open http://localhost:8000 during development. The backend is API-only and
+> serves no frontend — use `:5173`.
 
-**Production — Docker single process.** The multi-stage `Dockerfile` builds the SPA with
-`npm run build` (stage 1) into `frontend/dist`, then copies it as a sibling of `backend/`
-into the Python image (stage 2). At runtime the FastAPI backend serves both the API and the
-built static assets from a single process on `:8000` — there is no separate frontend server.
+**Production — two deploys, no proxy.** The SPA builds with `npm run build` and is hosted on
+**Vercel** at `app.forkcast.app`; `frontend/vercel.json` just serves `index.html` for client
+routes (SPA fallback). It calls the API **directly** at `https://api.forkcast.app` — set
+`VITE_API_BASE=https://api.forkcast.app` in the Vercel project. The FastAPI backend runs on
+**Railway** at `api.forkcast.app` (the `Dockerfile`, API only).
+
+The app and API are the **same site** (`forkcast.app`), so the `Lax` session cookie rides on
+the cross-origin calls with no `SameSite=None` needed. The backend enables CORS with
+credentials for the app origin — add `https://app.forkcast.app` to `CORS_ALLOW_ORIGINS`, and
+set `ENVIRONMENT=production` so the cookie is `Secure`.
+
+**OAuth.** In production keep `GOOGLE_REDIRECT_URI=https://api.forkcast.app/auth/google/callback`
+(the OAuth round-trip runs against the API host), and set `FRONTEND_URL=https://app.forkcast.app`
+so login/logout redirect back to the app.
 
 ## Landing Page
 
