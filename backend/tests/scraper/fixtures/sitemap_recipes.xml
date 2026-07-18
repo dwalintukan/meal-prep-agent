@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.example.com/recipes/pancakes</loc>
+  </url>
+  <url>
+    <loc>https://example.com/recipes/chicken</loc>
+  </url>
+  <url>
+    <loc>https://other-site.com/recipes/cake</loc>
+  </url>
+</urlset>

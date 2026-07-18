@@ -42,6 +42,7 @@ quote-style = "double"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.7.0",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "ruff>=0.15.13",

@@ -57,7 +57,7 @@ class ParseRecipeWorkflow:
 
         # Validate if able to parse
         if self._validate_recipe(recipe_input):
-            self.recipe = RecipeCreate(**recipe_input.model_dump())
+            self.recipe = RecipeCreate(**recipe_input.model_dump(), source_url=self.url)
 
     def _validate_recipe(self, recipe: ParseRecipeInput) -> bool:
         if recipe.ingredients == []:
