@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.deps import get_current_user, require_ingest_key
 from storage import RecipeStore
-from models import Recipe, RecipeCreate, User
+from models import Recipe, RecipeCreate
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 
@@ -25,8 +25,8 @@ async def ingest(recipe: RecipeCreate, request: Request):
     return {"id": recipe_id, "created": True}
 
 
-@router.get("/{id}")
-async def get(id: int, request: Request, user: User = Depends(get_current_user)):
+@router.get("/{id}", dependencies=[Depends(get_current_user)])
+async def get(id: int, request: Request):
     recipe_store: RecipeStore = request.app.state.recipe_store
     recipe: Recipe | None = await recipe_store.get(id)
 
