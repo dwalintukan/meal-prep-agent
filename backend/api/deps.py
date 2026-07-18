@@ -25,17 +25,17 @@ async def get_current_user(request: Request):
 
 
 async def require_ingest_key(request: Request) -> None:
-    """Auth for machine clients (the scraper CLI) via static bearer token.
-
+    """
+    Auth for machine clients (the scraper CLI) via static bearer token.
     Session cookies don't work outside a browser, so /recipes/ingest uses
     `Authorization: Bearer <INGEST_API_KEY>` instead.
     """
-    expected = os.getenv("INGEST_API_KEY")
-    if not expected:
+    api_key = os.getenv("INGEST_API_KEY")
+    if not api_key:
         # Fail loud: the endpoint is disabled until the key is configured.
         raise HTTPException(status_code=503, detail="Ingest not configured")
 
     auth = request.headers.get("Authorization", "")
     scheme, _, token = auth.partition(" ")
-    if scheme.lower() != "bearer" or not secrets.compare_digest(token, expected):
+    if scheme.lower() != "bearer" or not secrets.compare_digest(token, api_key):
         raise HTTPException(status_code=401, detail="Invalid ingest key")
