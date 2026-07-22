@@ -16,8 +16,8 @@ class RecipeStore:
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
                 recipe_id = await conn.fetchval(
-                    "INSERT INTO recipes (name, instructions, servings, prep_minutes, cook_minutes, tags, created_at) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, $7) "
+                    "INSERT INTO recipes (name, instructions, servings, prep_minutes, cook_minutes, tags, source_url, created_at) "
+                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "
                     "RETURNING id",
                     data.name,
                     json.dumps(data.instructions),
@@ -25,6 +25,7 @@ class RecipeStore:
                     data.prep_minutes,
                     data.cook_minutes,
                     json.dumps(data.tags),
+                    data.source_url,
                     datetime.today(),
                 )
                 if recipe_id is None:
@@ -60,6 +61,12 @@ class RecipeStore:
             )
             # TODO: N+1 query, ok for now, refactor later
             return [await self._load(conn, dict(r)) for r in rows]
+
+    async def get_id_by_source_url(self, url: str) -> int | None:
+        async with self.db_pool.acquire() as conn:
+            return await conn.fetchval(
+                "SELECT id FROM recipes WHERE source_url = $1", url
+            )
 
     async def get_all_unembedded(self) -> list[Recipe]:
         async with self.db_pool.acquire() as conn:
@@ -129,6 +136,7 @@ class RecipeStore:
             prep_minutes=row["prep_minutes"],
             cook_minutes=row["cook_minutes"],
             tags=json.loads(row["tags"]),
+            source_url=row["source_url"],
             created_at=row["created_at"],
             embedded=row["embedded"],
         )

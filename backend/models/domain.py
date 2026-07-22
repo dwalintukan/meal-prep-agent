@@ -26,6 +26,7 @@ class Recipe(BaseModel):
     prep_minutes: int
     cook_minutes: int
     tags: list[str]
+    source_url: str
     created_at: datetime
     embedded: bool
 
@@ -38,6 +39,7 @@ class RecipeCreate(BaseModel):
     prep_minutes: int
     cook_minutes: int
     tags: list[str]
+    source_url: str
 
 
 class ShoppingItem(BaseModel):

@@ -45,3 +45,6 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
+
+# Python tooling
+.ruff_cache/

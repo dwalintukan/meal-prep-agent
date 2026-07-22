@@ -1,3 +1,6 @@
+import asyncpg
+import pytest
+
 from storage import IngredientStore, RecipeStore
 from tests.factories import make_recipe, make_ingredient
 
@@ -13,6 +16,29 @@ async def test_recipe_create_no_ingredients(db):
     recipe_id = await store.create(recipe)
     result = await store.get(recipe_id)
     assert result.ingredients == []
+
+
+# ---------------------------------------------------------------------------
+# source_url dedup
+# ---------------------------------------------------------------------------
+
+
+async def test_recipe_create_duplicate_source_url_raises(db):
+    # source_url is the scraper's idempotency key: re-scraping a site must not
+    # insert the same recipe twice, even if two writers race past the lookup.
+    store = RecipeStore(db)
+    url = "https://example.com/recipes/pasta"
+    await store.create(make_recipe(source_url=url))
+    with pytest.raises(asyncpg.UniqueViolationError):
+        await store.create(make_recipe(name="Pasta Again", source_url=url))
+
+
+async def test_get_id_by_source_url(db):
+    store = RecipeStore(db)
+    url = "https://example.com/recipes/pasta"
+    recipe_id = await store.create(make_recipe(source_url=url))
+    assert await store.get_id_by_source_url(url) == recipe_id
+    assert await store.get_id_by_source_url("https://example.com/other") is None
 
 
 # ---------------------------------------------------------------------------

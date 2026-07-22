@@ -66,6 +66,7 @@ def workflow_with_recipe(mock_prompt_store):
         prep_minutes=15,
         cook_minutes=45,
         tags=["soup", "chicken"],
+        source_url="https://example.com/recipe",
         created_at=datetime.today(),
         embedded=False,
     )

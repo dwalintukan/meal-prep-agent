@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from models import Recipe, Ingredient, WeeklyPlan, ShoppingItem
 
@@ -21,7 +21,10 @@ def make_recipe(
     prep_minutes: int = 5,
     cook_minutes: int = 10,
     embedded: bool = True,
+    source_url: str | None = None,
 ) -> Recipe:
+    # source_url has a unique index, so default to a fresh URL per call — tests
+    # often create several recipes from this factory.
     return Recipe(
         id=id,
         name=name,
@@ -31,6 +34,7 @@ def make_recipe(
         prep_minutes=prep_minutes,
         cook_minutes=cook_minutes,
         tags=tags,
+        source_url=source_url or f"https://example.com/recipes/{uuid4().hex}",
         created_at=datetime.today(),
         embedded=embedded,
     )
